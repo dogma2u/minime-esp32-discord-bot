@@ -2,7 +2,7 @@
  MiniMe Discord bot (ESP32-S3 + SSD1327). Command list: Discord !help.
 
  Sketch map (top to bottom):
- 1) Config, pins, NTP / Pacific DST
+ 1) secrets.h, pins, NTP / Pacific DST
  2) Gateway state + 8-user presence / 24h command counts
  3) OLED dashboard, sleep, overlays (U8g2 drawStr; y = font baseline)
  4) GPIO, servo, DS18B20, NeoPixel
@@ -29,19 +29,7 @@
 #include <time.h>
 #include <string.h>
 #include <esp_idf_version.h>
-// ====== USER CONFIG ======
-// Local-only secrets. GitHub sketch keeps placeholders. Do not commit real values.
-const char* WIFI_SSID     = "ssid";
-const char* WIFI_PASSWORD = "password";
-const char* BOT_TOKEN     = "bot token";
-const char* WEATHER_API_KEY = "WEATHER_API_KEY";
-const char* NASA_API_KEY    = "NASA_API_KEY";
-const char* DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY";
-#define BOT_GUILD_ID "GUILD_ID"  // startup member fetch
-// ====== OWNER AND CHANNEL IDS ======
-const char* OWNER_ID_STR        = "OWNER_ID_STR";  // GPIO / servo
-const char* TARGET_CHANNEL_ID  = "TARGET_CHANNEL_ID";  // commands + auto posts
-const char* TARGET_CHANNEL_ID1 = "TARGET_CHANNEL_ID1";  // second command channel
+#include "secrets.h"  // copy from secrets.example.h; gitignored
 // Discord content max is 2000. !ask max_tokens / JSON buffer sized to fit one message.
 const int DISCORD_CONTENT_MAX = 2000;
 const int DEEPSEEK_MAX_TOKENS = 900;
@@ -801,7 +789,7 @@ String getSystemInfo() {
          "• **WiFi RSSI:** " + String(rssi) + " dBm\n"
          "• **Gateway Status:** " + String((gatewayConnected && identified) ? "Connected" : "Disconnected") + "\n"
          "• **USB VBUS:** " + String((float)readUsbVbusMilliVolts() / 1000.0f, 3) + " V\n"
-         "• **Firmware:** https://github.com/dogma2u/A-discord-bot-on-ESP32";
+         "• **Firmware:** https://github.com/dogma2u/minime-esp32-discord-bot";
 }
 bool httpsInUse = false; // blocks re-entrant REST while DeepSeek holds httpsClient
 bool sendDiscordMessage(const String& channelId, const String& content, bool suppressEmbeds = false) {
@@ -1452,7 +1440,7 @@ bool readHttpBodyAfterHeaders(Client& client, bool chunked, int contentLength,
 bool askDeepSeek(const String& question, String& outReport) {
   if (DEEPSEEK_API_KEY == nullptr || strlen(DEEPSEEK_API_KEY) == 0 ||
       strcmp(DEEPSEEK_API_KEY, "DEEPSEEK_API_KEY") == 0) {
-    outReport = "DeepSeek API key not set. Add DEEPSEEK_API_KEY in the sketch.";
+    outReport = "DeepSeek API key not set. Add DEEPSEEK_API_KEY in secrets.h.";
     return false;
   }
   String q = question;

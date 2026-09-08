@@ -1,6 +1,15 @@
 # Changelog
 
-Older sections describe that release as shipped. Current firmware and docs are **0.4.28** (see `VERSION` and README).
+Older sections describe that release as shipped. Current firmware and docs are **0.4.30** (see `VERSION` and README).
+
+## 0.4.30
+
+- Secrets moved out of the `.ino` into `MiniMe_Discord_Bot/secrets.h` (gitignored). Committed template: `secrets.example.h`. Sketch `#include "secrets.h"`.
+
+## 0.4.29
+
+- `!sysinfo` firmware link updated to `minime-esp32-discord-bot` (old repo name removed).
+- README fill-in block matches sketch: `OWNER_ID_STR` / channel IDs are `const char*` (same as 0.4.27 firmware).
 
 ## 0.4.28
 

@@ -102,6 +102,11 @@ When the OLED is off **and** Discord status is Idle, CPU is **80 MHz**; otherwis
 
 ## Fill in these values
 
+Secrets live in **`MiniMe_Discord_Bot/secrets.h`** (gitignored). The `.ino` does not hold Wi‑Fi, tokens, or IDs.
+
+1. Copy `MiniMe_Discord_Bot/secrets.example.h` → `MiniMe_Discord_Bot/secrets.h`
+2. Edit `secrets.h` with your real values (template below).
+
 ```cpp
 const char* WIFI_SSID     = "ssid";
 const char* WIFI_PASSWORD = "password";
@@ -109,10 +114,10 @@ const char* BOT_TOKEN     = "bot token";
 const char* WEATHER_API_KEY = "WEATHER_API_KEY";
 const char* NASA_API_KEY    = "NASA_API_KEY";
 const char* DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY";
-#define BOT_GUILD_ID "GUILD_ID"
-const String OWNER_ID_STR        = "OWNER_ID_STR";
-const String TARGET_CHANNEL_ID  = "TARGET_CHANNEL_ID";
-const String TARGET_CHANNEL_ID1 = "TARGET_CHANNEL_ID1";
+#define BOT_GUILD_ID "GUILD_ID"  // startup member fetch
+const char* OWNER_ID_STR        = "OWNER_ID_STR";  // GPIO / servo
+const char* TARGET_CHANNEL_ID  = "TARGET_CHANNEL_ID";  // commands + auto posts
+const char* TARGET_CHANNEL_ID1 = "TARGET_CHANNEL_ID1";  // second command channel
 ```
 
 | Field | Used for |
@@ -139,7 +144,7 @@ Boot loads OLED names from `BOT_GUILD_ID` and from the guilds of `TARGET_CHANNEL
 2. **New Application** → name it (for example MiniMe) → Create.
 3. Left sidebar: **Bot**.
 4. If there is no bot yet, click **Add Bot**.
-5. Under **Token**, click **Reset Token** / **Copy**. That string is `BOT_TOKEN`.
+5. Under **Token**, click **Reset Token** / **Copy**. That string is `BOT_TOKEN` in `secrets.h`.
 6. Treat it like a password. Anyone with it can control the bot.
 7. Enable these **Privileged Gateway Intents** (this firmware uses them):
    - **Message Content Intent**
@@ -166,7 +171,7 @@ This is **your Discord user ID**, not the bot’s ID.
 
 1. Discord: **User Settings** → **Advanced** → enable **Developer Mode**.
 2. Right-click **your own avatar** → **Copy User ID**.
-3. Paste that into `OWNER_ID_STR`.
+3. Paste that into `OWNER_ID_STR` in `secrets.h`.
 
 If owner commands never work, you copied a channel ID or the application ID by mistake.
 
