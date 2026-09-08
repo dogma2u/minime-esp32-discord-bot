@@ -1,6 +1,11 @@
 # Changelog
 
-Older sections describe that release as shipped. Current firmware and docs are **0.4.34** (see `VERSION` and README).
+Older sections describe that release as shipped. Current firmware and docs are **0.4.35** (see `VERSION` and README).
+
+## 0.4.35
+
+- LICENSE inventory updated for multi-file sketch sources; notes that local `secrets.h` is not in the repo.
+- GitHub About description synced to current version.
 
 ## 0.4.34
 

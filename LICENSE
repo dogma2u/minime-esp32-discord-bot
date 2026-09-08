@@ -5,8 +5,9 @@ Copyright (c) 2026 James, K9DTV
 This license applies only to original MiniMe material in this repository,
 including:
 
-  - MiniMe_Discord_Bot/MiniMe_Discord_Bot.ino (as original source, not
-    as a claim over libraries it #includes)
+  - MiniMe_Discord_Bot/ sketch sources (MiniMe_Discord_Bot.ino, minime.h,
+    config.h, secrets.example.h, and the accompanying .cpp modules), as
+    original source — not as a claim over libraries they #include
   - README.md, CHANGELOG.md, VERSION
   - docs/ photographs and other original documentation
 
@@ -16,6 +17,9 @@ under their own licenses and terms of service. You must obtain and comply
 with them separately (Arduino Library Manager, Espressif, Discord, NASA,
 OpenWeatherMap, DeepSeek, arXiv, Spaceflight News, Open Notify, and any
 other service you enable).
+
+Local secrets.h (gitignored) is never part of this repository and is not
+licensed by this file.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
