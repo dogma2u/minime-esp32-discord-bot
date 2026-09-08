@@ -1,6 +1,10 @@
 # Changelog
 
-Older sections describe that release as shipped. Current firmware and docs are **0.4.37** (see `VERSION` and README).
+Older sections describe that release as shipped. Current firmware and docs are **0.4.38** (see `VERSION` and README).
+
+## 0.4.38
+
+- README: short **How it works** architecture diagram (Gateway / REST / OLED / touch) as Mermaid, placed after **What this bot can do**.
 
 ## 0.4.37
 

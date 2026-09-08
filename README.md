@@ -71,6 +71,43 @@ MiniMe’s own Discord status (green Online / yellow Idle) in Discord:
 - HTTPS on the ESP32 can take several seconds
 - `!ask` is queued off the Discord Gateway thread; heartbeats keep running while DeepSeek waits
 
+## How it works
+
+Everything below runs on one **ESP32-S3**. Discord stays in the cloud; MiniMe talks to it two ways, paints the OLED, and wakes the panel from a touch pad.
+
+```mermaid
+flowchart TB
+  subgraph cloud [Cloud]
+    DG[Discord Gateway websocket]
+    DR[Discord HTTPS REST]
+    EXT[Public APIs: weather NASA arXiv DeepSeek ISS news]
+  end
+
+  subgraph board [WeAct ESP32-S3]
+    GW[Gateway: events heartbeat presence]
+    REST[REST: post messages fetch members]
+    CMD[Command handler + scheduled posts]
+    OLED[SSD1327 OLED dashboard]
+    TOUCH[Touch GPIO 4 + USB VBUS compensate]
+    IO[GPIO servo NeoPixel DS18B20]
+  end
+
+  DG <-->|TLS websocket| GW
+  DR <-->|TLS HTTPS| REST
+  EXT <-->|HTTP / HTTPS| REST
+  GW -->|MESSAGE_CREATE presence| CMD
+  REST --> CMD
+  CMD -->|rows 15-16 + bars| OLED
+  TOUCH -->|wake / full contrast| OLED
+  CMD --> IO
+  IO -->|temp servo| OLED
+```
+
+- **Gateway** — live link for chat commands, presence, Online/Idle, heartbeats (must not stall during long HTTPS).
+- **REST** — bot posts replies and loads member names; also pulls science/weather/AI over HTTPS/HTTP.
+- **OLED** — always the status board; sleep blanks the panel only (Wi‑Fi and Gateway stay up).
+- **Touch** — wakes the OLED only; does not change Discord status or fire GPIO commands.
+
 ---
 
 ## OLED dashboard
