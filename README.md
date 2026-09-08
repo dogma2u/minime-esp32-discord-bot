@@ -1,5 +1,7 @@
 # MiniMe — a Discord bot on ESP32-S3
 
+[![Compile](https://github.com/dogma2u/minime-esp32-discord-bot/actions/workflows/compile.yml/badge.svg)](https://github.com/dogma2u/minime-esp32-discord-bot/actions/workflows/compile.yml)
+
 MiniMe is firmware for a **WeAct Studio ESP32-S3-N16R8** that runs a Discord bot on the chip. It joins Wi‑Fi and the Discord Gateway, reads sensors, drives GPIO from chat, and shows a live dashboard on a **128×128 SSD1327** OLED.
 
 ![MiniMe ESP32-S3 breadboard prototype with SSD1327 OLED, touch pad, and DS18B20](docs/minime-breadboard-v2.jpg)
@@ -337,6 +339,8 @@ After changing the threshold, re-upload and tap the pad: the OLED should wake on
 ---
 
 ## Arduino IDE setup
+
+GitHub Actions compiles this sketch on every push to `master` (see the **Compile** badge at the top). That checks a clean build only; it does not upload to the board. Your breadboard photo and Discord use still prove it runs.
 
 1. Install [Arduino IDE](https://www.arduino.cc/en/software) and the **esp32** board package (Espressif).
 2. Board: **ESP32-S3**. This hardware is a **WeAct Studio ESP32-S3-N16R8** (N16 = 16MB flash, R8 = 8MB PSRAM).

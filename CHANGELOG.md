@@ -1,6 +1,10 @@
 # Changelog
 
-Older sections describe that release as shipped. Current firmware and docs are **0.4.36** (see `VERSION` and README).
+Older sections describe that release as shipped. Current firmware and docs are **0.4.37** (see `VERSION` and README).
+
+## 0.4.37
+
+- GitHub Actions compile check for ESP32-S3 (OPI PSRAM, 16MB flash) via `arduino-cli`; README build badge. CI compiles only (does not prove board/Discord).
 
 ## 0.4.36
 

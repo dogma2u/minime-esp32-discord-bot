@@ -1,0 +1,45 @@
+# Compile MiniMe for WeAct ESP32-S3-N16R8 (OPI PSRAM, 16MB flash).
+# Does not upload or run on hardware -- board photo / Discord still prove that.
+
+name: Compile
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install ESP32 core and libraries
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          # ArduinoJson 6.x: sketch uses DynamicJsonDocument (not ArduinoJson 7 API)
+          arduino-cli lib install "ArduinoJson@6.21.5"
+          arduino-cli lib install "WebSockets"
+          arduino-cli lib install "U8g2"
+          arduino-cli lib install "OneWire"
+          arduino-cli lib install "DallasTemperature"
+          arduino-cli lib install "Adafruit NeoPixel"
+          arduino-cli lib install "NTPClient"
+
+      - name: Prepare secrets placeholder
+        run: cp MiniMe_Discord_Bot/secrets.example.h MiniMe_Discord_Bot/secrets.h
+
+      - name: Compile sketch
+        run: |
+          arduino-cli compile \
+            --fqbn "esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi,PartitionScheme=default_16MB" \
+            MiniMe_Discord_Bot
