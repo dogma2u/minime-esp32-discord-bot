@@ -188,6 +188,8 @@ IDs are **digits only**. Paste them as C strings, for example `"1234567890123456
 
 Boot loads OLED names from `BOT_GUILD_ID` and from the guilds of `TARGET_CHANNEL_ID` and `TARGET_CHANNEL_ID1` (so both servers get names). Duplicate users are stored once. Slots are split across those guilds, then any leftover rows are filled.
 
+**Expand the sections below** for Discord bot token, owner/channel/guild IDs, and API key steps (OpenWeatherMap, NASA, DeepSeek).
+
 <details>
 <summary><strong>How to get a Discord bot token (<code>BOT_TOKEN</code>)</strong></summary>
 

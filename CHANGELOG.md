@@ -1,6 +1,10 @@
 # Changelog
 
-Older sections describe that release as shipped. Current firmware and docs are **0.4.38** (see `VERSION` and README).
+Older sections describe that release as shipped. Current firmware and docs are **0.4.39** (see `VERSION` and README).
+
+## 0.4.39
+
+- README: hint under secrets fill-in to expand the Discord/API setup `<details>` sections.
 
 ## 0.4.38
 
