@@ -1,6 +1,10 @@
 # Changelog
 
-Older sections describe that release as shipped. Current firmware and docs are **0.4.39** (see `VERSION` and README).
+Older sections describe that release as shipped. Current firmware and docs are **0.4.40** (see `VERSION` and README).
+
+## 0.4.40
+
+- README: status line under the photo; OLED and touch deep dives in `<details>`; **Why this is hard** bullets after How it works.
 
 ## 0.4.39
 

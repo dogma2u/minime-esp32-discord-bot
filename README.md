@@ -8,6 +8,8 @@ MiniMe is firmware for a **WeAct Studio ESP32-S3-N16R8** that runs a Discord bot
 
 *Breadboard prototype: WeAct Studio ESP32-S3-N16R8, 128×128 SSD1327 (GND / VCC / SCL / SDA), two discrete LEDs, GPIO 4 touch wake pad (yellow wire loop), and DS18B20 on GPIO 10. Sensor fail on the OLED is `T:--Error--`.*
 
+**Status:** working breadboard firmware · **v0.4.40** · green CI compile · PCB / desk case planned (see Ongoing project).
+
 Current version: see `VERSION` and `CHANGELOG.md`. License: see `LICENSE` (MIT for original MiniMe files only).
 
 This is my first big modern MCU / Discord bot project on ESP32.  
@@ -108,11 +110,24 @@ flowchart TB
 - **OLED** — always the status board; sleep blanks the panel only (Wi‑Fi and Gateway stay up).
 - **Touch** — wakes the OLED only; does not change Discord status or fire GPIO commands.
 
+### Why this is hard (on one MCU)
+
+- Discord Gateway heartbeats must keep running while long HTTPS calls (`!ask`, weather, NASA) use the same TLS client.
+- Large Gateway JSON lives in **PSRAM**; small Wi‑Fi/TLS buffers must **not** — wrong placement crashes this board.
+- OLED can dim and power-save while Wi‑Fi and the Gateway stay up (panel sleep ≠ chip sleep).
+- Capacitive touch trip point tracks **USB VBUS** so port sag does not false-trigger or go dead.
+- Eight live presence rows + 24h command counts share a tiny dashboard with no Serial debug path.
+
 ---
 
 ## OLED dashboard
 
-The display is a **128×128 SSD1327** grayscale OLED, driven with U8g2 (`U8G2_SSD1327_WS_128X128_F_HW_I2C`). Do not use the EastRising `EA_W128128` constructor on this panel; it shifts the picture so the top of the buffer is not the top of the glass.
+128×128 SSD1327 status board (U8g2). Expand for row map, `!display`, and sleep / CPU behavior.
+
+<details>
+<summary><strong>OLED row map, !display, and display sleep</strong></summary>
+
+The display is driven with U8g2 (`U8G2_SSD1327_WS_128X128_F_HW_I2C`). Do not use the EastRising `EA_W128128` constructor on this panel; it shifts the picture so the top of the buffer is not the top of the glass.
 
 Font is **5×7** with 1px padding (**8px** per row). U8g2 `drawStr(x, y)` uses **`y` as the font baseline** (no `setCursor`). Header `y=7` is the top of the panel (pixels ~0–6).
 
@@ -147,6 +162,8 @@ These **do not** reset the timer: signal / heap / servo bars, clock, uptime/temp
 These **wake** the panel and restart the 1-minute timer: **touch on the wake pad (GPIO 4)**, Discord commands, gateway connect/disconnect, `!display`, scheduled reports, and other status lines on rows 15–16. Presence updates for the eight user rows **do not** wake the panel.
 
 When the OLED is off **and** Discord status is Idle, CPU is **80 MHz**; otherwise **240 MHz**.
+
+</details>
 
 ---
 
@@ -334,6 +351,11 @@ TO-92, powered from **3.3 V** (not parasitic). Firmware enables the ESP32 **inte
 
 ## Touch wake pad (GPIO 4)
 
+Capacitive pad on **GPIO 4** wakes the OLED after dim/off. Expand for wiring, VBUS compensation, and tuning.
+
+<details>
+<summary><strong>Touch wiring, USB VBUS compensation, and tuning</strong></summary>
+
 The ESP32-S3 has a **built-in capacitive touch sensor** on **GPIO 4** (`TOUCH4`). MiniMe uses it to wake the OLED when the panel has dimmed or turned off. No Discord command is required — tap the pad like a light switch.
 
 ### Wiring
@@ -374,6 +396,8 @@ After changing the threshold, re-upload and tap the pad: the OLED should wake on
 
 - Touch **only wakes the OLED**. It does not send Discord messages, set Discord Online/Idle, move the servo, or change GPIO outputs.
 - The ESP32, Wi-Fi, and Gateway **never sleep** — only the display blanks to save the panel.
+
+</details>
 
 ---
 
