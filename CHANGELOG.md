@@ -1,6 +1,23 @@
 # Changelog
 
-Older sections describe that release as shipped. Current firmware and docs are **0.4.30** (see `VERSION` and README).
+Older sections describe that release as shipped. Current firmware and docs are **0.4.34** (see `VERSION` and README).
+
+## 0.4.34
+
+- README: Ongoing project section (OTA updates, set1/set2 when a configured user ID — normally the owner — is mentioned or DMed, PCB + desk case).
+
+## 0.4.33
+
+- README: short AI-use note (same idea as Space Wars — AI helped with edits; James owned architecture and board decisions).
+
+## 0.4.32
+
+- Secrets are `#define` macros in `secrets.h` (not `const char*` variables) so multi-file link no longer reports multiple definition of Wi-Fi/token symbols.
+
+## 0.4.31
+
+- Split monolithic `MiniMe_Discord_Bot.ino` into multi-file Arduino sketch: `config.h`, `minime.h`, and `.cpp` modules (time, users, display, touch, hardware, discord REST/gateway, commands). Behavior unchanged. Thin `.ino` holds setup/loop only.
+
 
 ## 0.4.30
 

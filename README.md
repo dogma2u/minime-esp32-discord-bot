@@ -8,6 +8,17 @@ MiniMe is firmware for a **WeAct Studio ESP32-S3-N16R8** that runs a Discord bot
 
 Current version: see `VERSION` and `CHANGELOG.md`. License: see `LICENSE` (MIT for original MiniMe files only).
 
+This is my first big modern MCU / Discord bot project on ESP32.  
+AI helped with firmware edits, multi-file layout, and GitHub updates. I owned the architecture, wiring, Discord Gateway/OLED design, commands, power/idle trade-offs, and what shipped on the board.
+
+## Ongoing project
+
+MiniMe is still in progress. Working board firmware is on this repo; more hardware and features are planned:
+
+- **Wireless firmware updates** — update the ESP32 over the network without a USB cable each time
+- **Mention / DM indicators on `set1` / `set2`** — drive those outputs when a configured user ID (normally `OWNER_ID_STR`) is @mentioned or receives a direct message (desk LEDs or similar)
+- **PCB and desk case** — move off the breadboard onto a custom board and enclosure that can sit on my desk
+
 ---
 
 ## What this bot can do
@@ -102,23 +113,25 @@ When the OLED is off **and** Discord status is Idle, CPU is **80 MHz**; otherwis
 
 ## Fill in these values
 
-Secrets live in **`MiniMe_Discord_Bot/secrets.h`** (gitignored). The `.ino` does not hold Wi‑Fi, tokens, or IDs.
+Secrets live in **`MiniMe_Discord_Bot/secrets.h`** (gitignored). No sketch source file holds Wi‑Fi, tokens, or IDs.
 
 1. Copy `MiniMe_Discord_Bot/secrets.example.h` → `MiniMe_Discord_Bot/secrets.h`
 2. Edit `secrets.h` with your real values (template below).
 
 ```cpp
-const char* WIFI_SSID     = "ssid";
-const char* WIFI_PASSWORD = "password";
-const char* BOT_TOKEN     = "bot token";
-const char* WEATHER_API_KEY = "WEATHER_API_KEY";
-const char* NASA_API_KEY    = "NASA_API_KEY";
-const char* DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY";
-#define BOT_GUILD_ID "GUILD_ID"  // startup member fetch
-const char* OWNER_ID_STR        = "OWNER_ID_STR";  // GPIO / servo
-const char* TARGET_CHANNEL_ID  = "TARGET_CHANNEL_ID";  // commands + auto posts
-const char* TARGET_CHANNEL_ID1 = "TARGET_CHANNEL_ID1";  // second command channel
+#define WIFI_SSID            "ssid"
+#define WIFI_PASSWORD        "password"
+#define BOT_TOKEN            "bot token"
+#define WEATHER_API_KEY      "WEATHER_API_KEY"
+#define NASA_API_KEY         "NASA_API_KEY"
+#define DEEPSEEK_API_KEY     "DEEPSEEK_API_KEY"
+#define BOT_GUILD_ID         "GUILD_ID"  // startup member fetch
+#define OWNER_ID_STR         "OWNER_ID_STR"         // GPIO / servo
+#define TARGET_CHANNEL_ID    "TARGET_CHANNEL_ID"    // commands + auto posts
+#define TARGET_CHANNEL_ID1   "TARGET_CHANNEL_ID1"   // second command channel
 ```
+
+Use `#define` (not `const char*`) so every `.cpp` can include `secrets.h` without linker “multiple definition” errors.
 
 | Field | Used for |
 |---|---|
@@ -247,7 +260,7 @@ Display: **SSD1327**, **128×128** pixels, I2C.
 | Touch wake pad | 4 |
 | USB VBUS ADC (divider) | 1 |
 
-OLED module labels: **GND, VCC, SCL, SDA**. The panel is **128×128**. Change pins in the sketch if your wiring differs.
+OLED module labels: **GND, VCC, SCL, SDA**. The panel is **128×128**. Change pins in `config.h` if your wiring differs.
 
 ### RGB NeoPixel (GPIO 48)
 
@@ -289,16 +302,16 @@ USB port voltage moves the raw touch numbers. MiniMe reads VBUS through a **divi
 
 1. **Do not** connect USB 5V directly to GPIO 1 (max ~3.3 V on the pin).
 2. Wire: **USB 5V (VBUS)** → **10 kΩ** → **GPIO 1** → **10 kΩ** → **GND**.
-3. Change `PIN_USB_VBUS_ADC` / `USB_VBUS_R_HI` / `USB_VBUS_R_LO` in the sketch if your divider or pin differs.
+3. Change `PIN_USB_VBUS_ADC` / `USB_VBUS_R_HI` / `USB_VBUS_R_LO` in `config.h` if your divider or pin differs.
 4. `!sysinfo` reports **USB VBUS** in volts to millivolt resolution (about **5.000 V** with a 1:1 divider on a healthy 5 V port). An unwired pin will read junk; compensation is skipped if the reading is below **1000 mV**. The ADC is sampled at most every **500 ms**.
 
 ### How it works in firmware
 
-- **`PIN_TOUCH`** is **4** (change in the sketch if you use a different touch-capable GPIO).
+- **`PIN_TOUCH`** is **4** (change in `config.h` if you use a different touch-capable GPIO).
 - At boot, **`setupTouch()`** runs **after Wi-Fi and I2C**. It samples USB VBUS, then fills a **16-sample rolling average** of voltage-compensated idle touch readings (`touchIdleAvg`).
 - Trip is always **`touchIdleAvg + TOUCH_THRESHOLD`** (default gap **2000**). Idle samples below trip keep updating the rolling window; a tap does not.
 - **`loop()`** calls **`pollTouchWake()`** (no touch interrupt). A rising edge, after a **300 ms** debounce, uses the same wake path as a Discord event (full contrast, 1-minute idle timer restarted).
-- Serial logging / touch debug is **removed** from the sketch (not just commented out).
+- Serial logging / touch debug is **removed** from the firmware (not just commented out).
 
 ### Tuning sensitivity
 
@@ -328,9 +341,9 @@ After changing the threshold, re-upload and tap the pad: the OLED should wake on
    - DallasTemperature
    - Adafruit NeoPixel
    - NTPClient
-5. Open `MiniMe_Discord_Bot/MiniMe_Discord_Bot.ino`.
-6. Fill in Wi‑Fi, token, keys, and IDs.
-7. Upload. The sketch has no Serial logging; use Discord `!help` and the OLED to confirm it is running.
+5. Open `MiniMe_Discord_Bot/MiniMe_Discord_Bot.ino` (Arduino IDE loads all `.cpp` files in that folder automatically).
+6. Copy `secrets.example.h` to `secrets.h` and fill in Wi‑Fi, token, keys, and IDs.
+7. Upload. The firmware has no Serial logging; use Discord `!help` and the OLED to confirm it is running.
 8. In Discord, try `!help`. Tap the GPIO 4 pad to wake the OLED after it dims off.
 
 Do not enable `heap_caps_malloc_extmem_enable` for small allocations. Wi‑Fi / TLS in PSRAM can crash this board. Gateway JSON (`256KB`) is allocated in PSRAM on purpose.
@@ -339,7 +352,7 @@ Do not enable `heap_caps_malloc_extmem_enable` for small allocations. Wi‑Fi / 
 
 ## Safety
 
-- Never commit a sketch that contains a live bot token, API key, password, or Discord snowflake ID.
+- Never commit firmware that contains a live bot token, API key, password, or Discord snowflake ID.
 - If a token leaks, reset it in the Developer Portal immediately.
 
 ---
