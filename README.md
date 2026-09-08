@@ -149,9 +149,8 @@ IDs are **digits only**. Paste them as C strings, for example `"1234567890123456
 
 Boot loads OLED names from `BOT_GUILD_ID` and from the guilds of `TARGET_CHANNEL_ID` and `TARGET_CHANNEL_ID1` (so both servers get names). Duplicate users are stored once. Slots are split across those guilds, then any leftover rows are filled.
 
----
-
-## How to get a Discord bot token (`BOT_TOKEN`)
+<details>
+<summary><strong>How to get a Discord bot token (<code>BOT_TOKEN</code>)</strong></summary>
 
 1. Open [Discord Developer Portal](https://discord.com/developers/applications) and sign in.
 2. **New Application** → name it (for example MiniMe) → Create.
@@ -176,9 +175,10 @@ Boot loads OLED names from `BOT_GUILD_ID` and from the guilds of `TARGET_CHANNEL
 4. Copy the generated URL, open it in a browser, pick your server, authorize.
 5. In Discord, the bot stays offline until the ESP32 connects.
 
----
+</details>
 
-## How to get your owner ID (`OWNER_ID_STR`)
+<details>
+<summary><strong>How to get your owner ID (<code>OWNER_ID_STR</code>)</strong></summary>
 
 This is **your Discord user ID**, not the bot’s ID.
 
@@ -188,9 +188,10 @@ This is **your Discord user ID**, not the bot’s ID.
 
 If owner commands never work, you copied a channel ID or the application ID by mistake.
 
----
+</details>
 
-## How to get channel and guild IDs
+<details>
+<summary><strong>How to get channel and guild IDs</strong></summary>
 
 Developer Mode must be on.
 
@@ -199,9 +200,10 @@ Developer Mode must be on.
 
 The bot must be able to **see and send** in those channels.
 
----
+</details>
 
-## How to get an OpenWeatherMap key (`WEATHER_API_KEY`)
+<details>
+<summary><strong>How to get an OpenWeatherMap key (<code>WEATHER_API_KEY</code>)</strong></summary>
 
 1. Create a free account at [OpenWeatherMap](https://home.openweathermap.org/users/sign_up).
 2. Sign in → [API keys](https://home.openweathermap.org/api_keys).
@@ -209,6 +211,8 @@ The bot must be able to **see and send** in those channels.
 4. Paste it into `WEATHER_API_KEY` with **no extra spaces**.
 5. New keys can take up to a few hours to activate.
 6. `!weather` uses Current Weather Data with `zip={zip},US` and `units=imperial`.
+
+</details>
 
 ---
 
@@ -223,15 +227,17 @@ These are public. Digests are short so the ESP32 stays within memory limits.
 | `!apod` | [NASA APOD](https://api.nasa.gov/) — title, short explanation, image URL | Yes |
 | `!iss` | [Open Notify](http://open-notify.org/) — ISS latitude / longitude | No |
 
-### How to get a NASA key (`NASA_API_KEY`)
+<details>
+<summary><strong>How to get a NASA key (<code>NASA_API_KEY</code>)</strong></summary>
 
 1. Open [api.nasa.gov](https://api.nasa.gov/) and generate a free key (email signup).
 2. Paste it into `NASA_API_KEY`.
 3. NASA’s `DEMO_KEY` works for light testing but is shared and rate-limited. Use your own key if `!apod` starts failing.
 
----
+</details>
 
-## How to get a DeepSeek key (`DEEPSEEK_API_KEY`)
+<details>
+<summary><strong>How to get a DeepSeek key (<code>DEEPSEEK_API_KEY</code>)</strong></summary>
 
 1. Create an account at [DeepSeek Platform](https://platform.deepseek.com/).
 2. Open [API Keys](https://platform.deepseek.com/api_keys).
@@ -239,6 +245,8 @@ These are public. Digests are short so the ESP32 stays within memory limits.
 4. Paste it into `DEEPSEEK_API_KEY`.
 5. In Discord: `!ask what is quantum entanglement?`
 6. Replies are capped at **2000** characters (Discord limit). HTTPS on the ESP32 can take several seconds.
+
+</details>
 
 ---
 

@@ -1,6 +1,10 @@
 # Changelog
 
-Older sections describe that release as shipped. Current firmware and docs are **0.4.35** (see `VERSION` and README).
+Older sections describe that release as shipped. Current firmware and docs are **0.4.36** (see `VERSION` and README).
+
+## 0.4.36
+
+- README: collapse Discord/OpenWeatherMap/NASA/DeepSeek/ID howto sections into `<details>` so the top stays product + photo + features.
 
 ## 0.4.35
 
