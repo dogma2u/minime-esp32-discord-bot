@@ -4,11 +4,11 @@
 
 **Project page:** https://k9dtv.com/project-minime.html
 
-MiniMe is firmware for a **WeAct Studio ESP32-S3-N16R8** that runs a Discord bot on the chip. It joins Wi‑Fi and the Discord Gateway, reads sensors, drives GPIO from chat, and shows a live dashboard on a **128×128 SSD1327** OLED.
+MiniMe is firmware for a **WeAct Studio ESP32-S3-N16R8** that runs a Discord bot on the chip. It joins Wi-Fi and the Discord Gateway, reads sensors, drives GPIO from chat, and shows a live dashboard on a **128x128 SSD1327** OLED.
 
 ![MiniMe ESP32-S3 breadboard prototype with SSD1327 OLED, touch pad, and DS18B20](docs/minime-breadboard-v2.jpg)
 
-*Breadboard prototype: WeAct Studio ESP32-S3-N16R8, 128×128 SSD1327 (GND / VCC / SCL / SDA), two discrete LEDs, GPIO 4 touch wake pad (yellow wire loop), and DS18B20 on GPIO 10. Sensor fail on the OLED is `T:--Error--`.*
+*Breadboard prototype: WeAct Studio ESP32-S3-N16R8, 128x128 SSD1327 (GND / VCC / SCL / SDA), two discrete LEDs, GPIO 4 touch wake pad (yellow wire loop), and DS18B20 on GPIO 10. Sensor fail on the OLED is `T:--Error--`.*
 
 **Status:** working breadboard firmware · **v0.4.48** · green CI compile · PCB / desk case planned (see Ongoing project).
 
@@ -21,7 +21,7 @@ AI helped with firmware edits, multi-file layout, and GitHub updates. I owned th
 
 MiniMe is still in progress. Working board firmware is on this repo; more hardware and features are planned:
 
-- **Wireless firmware updates** — ArduinoOTA over Wi‑Fi (owner `!ota`); first flash still USB
+- **Wireless firmware updates** — ArduinoOTA over Wi-Fi (owner `!ota`); first flash still USB
 - **Mention / DM indicators on `set1` / `set2`** — drive those outputs when a configured user ID (normally `OWNER_ID_STR`) is @mentioned or receives a direct message (desk LEDs or similar)
 - **PCB and desk case** — move off the breadboard onto a custom board and enclosure that can sit on my desk
 
@@ -35,20 +35,20 @@ Same list Discord shows for `!help`:
 
 - `!apod` — NASA Astronomy Picture of the Day
 - `!ask <question>` — DeepSeek text reply in chat
-- `!display <text>` — writes payload text on OLED rows 15–16 (not the `!display` word)
+- `!display <text>` — writes payload text on OLED rows 15-16 (not the `!display` word)
 - `!help` — this command list
 - `!iss` — International Space Station position
 - `!news` — space / high-tech headlines
 - `!physics` — latest arXiv physics papers
-- `!sysinfo` — uptime, free heap (internal + 8MB PSRAM), Wi‑Fi RSSI, gateway, USB VBUS
+- `!sysinfo` — uptime, free heap (internal + 8MB PSRAM), Wi-Fi RSSI, gateway, USB VBUS
 - `!temp` — indoor DS18B20 temperature
 - `!time` — bot local time (US Pacific, DST aware)
 - `!weather <zip>` — US ZIP weather (OpenWeatherMap)
 
 **Owner-only** (`OWNER_ID_STR`):
 
-- `!led on/off` / `!led <r> <g> <b>` — RGB NeoPixel (0–255 per channel); GPIO 48; `on` = 255 255 255
-- `!ota` — Wi‑Fi OTA info (IP / hostname); Serial Monitor is USB+COM only
+- `!led on/off` / `!led <r> <g> <b>` — RGB NeoPixel (0-255 per channel); GPIO 48; `on` = 255 255 255
+- `!ota` — Wi-Fi OTA info (IP / hostname); Serial Monitor is USB+COM only
 - `!servo <0-90>` — servo angle (updates the `Srv:` bar)
 - `!set1 on` / `!set1 off` — digital output pin 1
 - `!set2 on` / `!set2 off` — digital output pin 2
@@ -110,14 +110,14 @@ flowchart TB
 
 - **Gateway** — live link for chat commands, presence, Online/Idle, heartbeats (must not stall during long HTTPS).
 - **REST** — bot posts replies and loads member names; also pulls science/weather/AI over HTTPS/HTTP.
-- **OLED** — always the status board; sleep blanks the panel only (Wi‑Fi and Gateway stay up).
+- **OLED** — always the status board; sleep blanks the panel only (Wi-Fi and Gateway stay up).
 - **Touch** — wakes the OLED only; does not change Discord status or fire GPIO commands.
 
 ### Why this is hard (on one MCU)
 
 - Discord Gateway heartbeats must keep running while long HTTPS calls (`!ask`, weather, NASA) use the same TLS client.
-- Large Gateway JSON lives in **PSRAM**; small Wi‑Fi/TLS buffers must **not** — wrong placement crashes this board.
-- OLED can dim and power-save while Wi‑Fi and the Gateway stay up (panel sleep ≠ chip sleep).
+- Large Gateway JSON lives in **PSRAM**; small Wi-Fi/TLS buffers must **not** — wrong placement crashes this board.
+- OLED can dim and power-save while Wi-Fi and the Gateway stay up (panel sleep ≠ chip sleep).
 - Capacitive touch trip point tracks **USB VBUS** so port sag does not false-trigger or go dead.
 - Eight live presence rows + 24h command counts share a tiny dashboard with no Serial debug path.
 
@@ -125,25 +125,25 @@ flowchart TB
 
 ## OLED dashboard
 
-128×128 SSD1327 status board (U8g2). Expand for row map, `!display`, and sleep / CPU behavior.
+128x128 SSD1327 status board (U8g2). Expand for row map, `!display`, and sleep / CPU behavior.
 
 <details>
 <summary><strong>OLED row map, !display, and display sleep</strong></summary>
 
 The display is driven with U8g2 (`U8G2_SSD1327_WS_128X128_F_HW_I2C`). Do not use the EastRising `EA_W128128` constructor on this panel; it shifts the picture so the top of the buffer is not the top of the glass.
 
-Font is **5×7** with 1px padding (**8px** per row). U8g2 `drawStr(x, y)` uses **`y` as the font baseline** (no `setCursor`). Header `y=7` is the top of the panel (pixels ~0–6).
+Font is **5x7** with 1px padding (**8px** per row). U8g2 `drawStr(x, y)` uses **`y` as the font baseline** (no `setCursor`). Header `y=7` is the top of the panel (pixels ~0-6).
 
 | Row | Baseline y | What it shows |
 |---|---|---|
 | 0 | 7 | `MiniMe`, `GW:Good` / `GW:Bad`, right-justified `HH:MM:SS` |
 | 2 | 15 | `Bot:Online` / `Bot:Idle  ` (left, 10 chars); `Www Mmm dd YYYY` (right, 15 chars, space-padded day, fixed slot) |
 | 3 | 23 | `Up:xxxxdxxhxxm T:xxxF/xxxC` (space-padded); sensor fail: `T:--Error--` |
-| 4 | 31 | `Sig:` Wi‑Fi RSSI bar |
+| 4 | 31 | `Sig:` Wi-Fi RSSI bar |
 | 5 | 39 | `Heap:` free memory bar (internal SRAM + 8MB PSRAM) |
-| 6 | 47 | `Srv:` servo position bar, **0–90°** (boot commands **45°**, half fill) |
-| 7–14 | 55 + row×8 … 111 | Eight user rows: name, `On` / `Idle` / `DND` / `Off`, `Bot:N` (commands in the last 24 hours) |
-| 15–16 | 119 / 127 | Command / action text, or `!display` payload. **Blank when idle** |
+| 6 | 47 | `Srv:` servo position bar, **0-90°** (boot commands **45°**, half fill) |
+| 7-14 | 55 + rowx8 … 111 | Eight user rows: name, `On` / `Idle` / `DND` / `Off`, `Bot:N` (commands in the last 24 hours) |
+| 15-16 | 119 / 127 | Command / action text, or `!display` payload. **Blank when idle** |
 
 Empty user slots show `---`. Names come from a startup REST member fetch (nick → global name → username), up to **eight** members. Presence updates from the Gateway. Command counts reset every 24 hours.
 
@@ -162,7 +162,7 @@ After **1 minute** with no real events, contrast **dims over 15 seconds**, then 
 
 These **do not** reset the timer: signal / heap / servo bars, clock, uptime/temp on row 3, and the 2-second dashboard refresh.
 
-These **wake** the panel and restart the 1-minute timer: **touch on the wake pad (GPIO 4)**, Discord commands, gateway connect/disconnect, `!display`, scheduled reports, and other status lines on rows 15–16. Presence updates for the eight user rows **do not** wake the panel.
+These **wake** the panel and restart the 1-minute timer: **touch on the wake pad (GPIO 4)**, Discord commands, gateway connect/disconnect, `!display`, scheduled reports, and other status lines on rows 15-16. Presence updates for the eight user rows **do not** wake the panel.
 
 When the OLED is off **and** Discord status is Idle, CPU is **80 MHz**; otherwise **240 MHz**.
 
@@ -172,7 +172,7 @@ When the OLED is off **and** Discord status is Idle, CPU is **80 MHz**; otherwis
 
 ## Fill in these values
 
-Secrets live in **`MiniMe_Discord_Bot/secrets.h`** (gitignored). No sketch source file holds Wi‑Fi, tokens, or IDs.
+Secrets live in **`MiniMe_Discord_Bot/secrets.h`** (gitignored). No sketch source file holds Wi-Fi, tokens, or IDs.
 
 1. Copy `MiniMe_Discord_Bot/secrets.example.h` → `MiniMe_Discord_Bot/secrets.h`
 2. Edit `secrets.h` with your real values (template below).
@@ -192,11 +192,11 @@ Secrets live in **`MiniMe_Discord_Bot/secrets.h`** (gitignored). No sketch sourc
 #define OTA_PASSWORD         "change-me-ota"
 ```
 
-Use `#define` (not `const char*`) so every `.cpp` can include `secrets.h` without linker “multiple definition” errors.
+Use `#define` (not `const char*`) so every `.cpp` can include `secrets.h` without linker "multiple definition" errors.
 
 | Field | Used for |
 |---|---|
-| `WIFI_SSID` / `WIFI_PASSWORD` | ESP32 station Wi‑Fi |
+| `WIFI_SSID` / `WIFI_PASSWORD` | ESP32 station Wi-Fi |
 | `BOT_TOKEN` | Discord Gateway + REST |
 | `WEATHER_API_KEY` | OpenWeatherMap `!weather` |
 | `NASA_API_KEY` | NASA APOD for `!apod` |
@@ -206,7 +206,7 @@ Use `#define` (not `const char*`) so every `.cpp` can include `secrets.h` withou
 | `TARGET_CHANNEL_ID` | Commands + auto sysinfo / scheduled summaries |
 | `TARGET_CHANNEL_ID1` | Second channel where commands are allowed |
 | `OTA_HOSTNAME` | ArduinoOTA mDNS name (`minime.local`) |
-| `OTA_PASSWORD` | Password you invent for Wi‑Fi firmware upload |
+| `OTA_PASSWORD` | Password you invent for Wi-Fi firmware upload |
 
 IDs are **digits only**. Paste them as C strings, for example `"123456789012345678"`.
 
@@ -224,9 +224,9 @@ Boot loads OLED names from `BOT_GUILD_ID` and from the guilds of `TARGET_CHANNEL
 5. Under **Token**, click **Reset Token** / **Copy**. That string is `BOT_TOKEN` in `secrets.h`.
 6. Treat it like a password. Anyone with it can control the bot.
 7. Enable these **Privileged Gateway Intents** (this firmware uses them):
-   - **Message Content Intent**
-   - **Server Members Intent**
-   - **Presence Intent**
+  - **Message Content Intent**
+  - **Server Members Intent**
+  - **Presence Intent**
 8. Identify intents value in firmware: `37635` (guilds, members, presences, guild messages, DMs, message content). `large_threshold` is `250`.
 
 ### Invite the bot to your server
@@ -234,9 +234,9 @@ Boot loads OLED names from `BOT_GUILD_ID` and from the guilds of `TARGET_CHANNEL
 1. Developer Portal → your app → **OAuth2** → **URL Generator**.
 2. Scopes: `bot`.
 3. Bot permissions (minimum):
-   - View Channels
-   - Send Messages
-   - Read Message History
+  - View Channels
+  - Send Messages
+  - Read Message History
 4. Copy the generated URL, open it in a browser, pick your server, authorize.
 5. In Discord, the bot stays offline until the ESP32 connects.
 
@@ -319,28 +319,28 @@ These are public. Digests are short so the ESP32 stays within memory limits.
 
 This board: **WeAct Studio ESP32-S3-N16R8** (**16MB flash**, **8MB PSRAM**).
 
-Display: **SSD1327**, **128×128** pixels, I2C.
+Display: **SSD1327**, **128x128** pixels, I2C.
 
 | Device | GPIO |
 |---|---|
-| RGB NeoPixel (1×, GRB; `!led`) | 48 |
+| RGB NeoPixel (1x, GRB; `!led`) | 48 |
 | Servo | 47 |
 | Digital out 1 (`!set1`) | 6 |
 | Digital out 2 (`!set2`) | 7 |
 | DS18B20 data | 10 |
-| OLED SSD1327 (128×128) SDA | 8 |
-| OLED SSD1327 (128×128) SCL | 9 |
+| OLED SSD1327 (128x128) SDA | 8 |
+| OLED SSD1327 (128x128) SCL | 9 |
 | Touch wake pad | 4 |
 | USB VBUS ADC (divider) | 1 |
 
-OLED module labels: **GND, VCC, SCL, SDA**. The panel is **128×128**. Change pins in `config.h` if your wiring differs.
+OLED module labels: **GND, VCC, SCL, SDA**. The panel is **128x128**. Change pins in `config.h` if your wiring differs.
 
 ### RGB NeoPixel (GPIO 48)
 
 One WS2812-style pixel (`NEO_GRB`). Owner-only:
 
 - `!led on/off` — white (255, 255, 255) / off (0, 0, 0)
-- `!led <r> <g> <b>` — set red, green, blue each **0–255** (example: `!led 255 0 0` red)
+- `!led <r> <g> <b>` — set red, green, blue each **0-255** (example: `!led 255 0 0` red)
 
 ### DS18B20 (GPIO 10)
 
@@ -368,8 +368,8 @@ The ESP32-S3 has a **built-in capacitive touch sensor** on **GPIO 4** (`TOUCH4`)
 ### Wiring
 
 1. Connect a **conductive pad** to **GPIO 4** on the ESP32-S3:
-   - Copper tape, a short wire, a small metal plate, or a spring contact all work.
-   - Solder or screw the pad lead to the **GPIO 4** header pin (or a breadboard row tied to GPIO 4).
+  - Copper tape, a short wire, a small metal plate, or a spring contact all work.
+  - Solder or screw the pad lead to the **GPIO 4** header pin (or a breadboard row tied to GPIO 4).
 2. **No external resistor or pull-up** is needed. Touch sensing uses the chip’s internal capacitive front end.
 3. **Ground reference:** a finger touching the pad (or a grounded metal bezel) completes the capacitive path. Mount the pad where you can reach it when the display is asleep.
 4. Keep the touch lead **short** and away from noisy switching loads (servo, NeoPixel) if possible. Long loose wires pick up noise and can false-trigger.
@@ -395,7 +395,7 @@ USB port voltage moves the raw touch numbers. MiniMe reads VBUS through a **divi
 
 If the pad is **hard to trigger**, decrease **`TOUCH_THRESHOLD`** (default **2000**).
 
-If it **false-triggers** or stays “touched” when idle, **increase** the threshold or use a **smaller pad**.
+If it **false-triggers** or stays "touched" when idle, **increase** the threshold or use a **smaller pad**.
 
 After changing the threshold, re-upload and tap the pad: the OLED should wake only on a real touch.
 
@@ -413,40 +413,40 @@ After changing the threshold, re-upload and tap the pad: the OLED should wake on
 GitHub Actions compiles this sketch on every push to `master` (see the **Compile** badge at the top). That checks a clean build only; it does not upload to the board. Your breadboard photo and Discord use still prove it runs.
 
 **Board must be set to: ESP32S3 Dev Module** (Tools → Board → esp32 → **ESP32S3 Dev Module**).  
-Do not pick a generic “ESP32 Dev Module” or other chip. Wrong board → missing headers / bad flash / no Serial on USB‑C.
+Do not pick a generic "ESP32 Dev Module" or other chip. Wrong board → missing headers / bad flash / no Serial on USB-C.
 
 Hardware is a **WeAct Studio ESP32-S3-N16R8** (N16 = 16MB flash, R8 = 8MB PSRAM). Use **ESP32S3 Dev Module** with the Tools below.
 
 1. Install [Arduino IDE](https://www.arduino.cc/en/software) and the **esp32** board package (Espressif).
 2. **Tools → Board → ESP32S3 Dev Module** (required).
 3. Tools (typical for this WeAct board):
-   - **USB CDC On Boot:** Enabled (Serial Monitor on the USB‑C COM port)
-   - **USB Mode:** Hardware CDC and JTAG (or USB‑OTG CDC)
-   - **PSRAM:** OPI PSRAM
-   - **Flash Size:** 16MB
-   - **Partition Scheme:** a **16MB** scheme that includes **OTA** (dual app slots) if you use Wi‑Fi update
+  - **USB CDC On Boot:** Enabled (Serial Monitor on the USB-C COM port)
+  - **USB Mode:** Hardware CDC and JTAG (or USB-OTG CDC)
+  - **PSRAM:** OPI PSRAM
+  - **Flash Size:** 16MB
+  - **Partition Scheme:** a **16MB** scheme that includes **OTA** (dual app slots) if you use Wi-Fi update
 4. Libraries (Library Manager):
-   - WebSockets (by Markus Sattler)
-   - ArduinoJson **6.x** (sketch uses `DynamicJsonDocument`)
-   - U8g2
-   - OneWire
-   - DallasTemperature
-   - Adafruit NeoPixel
-   - NTPClient
+  - WebSockets (by Markus Sattler)
+  - ArduinoJson **6.x** (sketch uses `DynamicJsonDocument`)
+  - U8g2
+  - OneWire
+  - DallasTemperature
+  - Adafruit NeoPixel
+  - NTPClient
 5. Open `MiniMe_Discord_Bot/MiniMe_Discord_Bot.ino` (Arduino IDE loads all `.cpp` files in that folder automatically).
-6. Copy `secrets.example.h` to `secrets.h` and fill in Wi‑Fi, token, keys, IDs, plus `OTA_HOSTNAME` / `OTA_PASSWORD`.
+6. Copy `secrets.example.h` to `secrets.h` and fill in Wi-Fi, token, keys, IDs, plus `OTA_HOSTNAME` / `OTA_PASSWORD`.
 7. First upload via **USB** + COM. Serial Monitor **115200** shows `[GW]` / `[OTA]` lines.
 8. In Discord, try `!help`. Tap the GPIO 4 pad to wake the OLED after it dims off.
 
-### Wi‑Fi OTA (after the first USB flash)
+### Wi-Fi OTA (after the first USB flash)
 
-1. Same Wi‑Fi as your PC. Owner: `!ota` for IP.
+1. Same Wi-Fi as your PC. Owner: `!ota` for IP.
 2. **Tools → Port →** the **network** port (`minime` / board IP) — not COM.
 3. Upload; enter `OTA_PASSWORD` when asked.
 4. Serial Monitor still needs **USB + COM** (network port has no Monitor).
-5. If “Could not connect” to the IP: allow Arduino IDE through Windows Firewall; confirm Serial shows `[OTA] ready`.
+5. If "Could not connect" to the IP: allow Arduino IDE through Windows Firewall; confirm Serial shows `[OTA] ready`.
 
-Do not enable `heap_caps_malloc_extmem_enable` for small allocations. Wi‑Fi / TLS in PSRAM can crash this board. Gateway JSON (`256KB`) is allocated in PSRAM on purpose.
+Do not enable `heap_caps_malloc_extmem_enable` for small allocations. Wi-Fi / TLS in PSRAM can crash this board. Gateway JSON (`256KB`) is allocated in PSRAM on purpose.
 
 ---
 
