@@ -18,6 +18,17 @@
 #include "secrets.h"
 #include "config.h"
 
+// Dual UART + USB CDC logging (ESP32-S3 USB-C often needs this)
+class MmLogClass : public Print {
+ public:
+  size_t write(uint8_t c) override;
+  size_t write(const uint8_t* buffer, size_t size) override;
+  void flushAll();
+};
+extern MmLogClass MmLog;
+void mmSerialBegin();
+bool mmSerialCdcOnBoot();
+
 // ====== USER TRACKING ======
 struct TrackedUser {
   String userId, userName;
@@ -46,11 +57,18 @@ void updateBotPresenceIdle();
 void sendBotPresence(const char* status, bool afk);
 void applyCpuForIdleState();
 void sendIdentify();
+void sendResume();
 void sendHeartbeat();
 void pumpGateway();
+void gwSerialService();
 void gatewayEvent(WStype_t type, uint8_t* payload, size_t length);
 void requestTrackedUserPresences();
 void gwSendJson(JsonDocument& doc);
+
+// ====== WIFI OTA ======
+void setupMiniMeOta();
+void pumpOta();
+String otaStatusText();
 
 // ====== DISCORD REST / HTTPS ======
 extern WiFiClientSecure httpsClient;

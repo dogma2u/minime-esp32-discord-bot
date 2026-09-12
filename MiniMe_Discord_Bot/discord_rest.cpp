@@ -32,6 +32,8 @@ String getSystemInfo() {
          "• **Free Heap:** " + String((unsigned long)freeHeap) + " / " +
          String((unsigned long)totalHeap) + " bytes\n"
          "• **WiFi RSSI:** " + String(rssi) + " dBm\n"
+         "• **IP:** " + WiFi.localIP().toString() + "\n"
+         "• **OTA host:** " + String(OTA_HOSTNAME) + ".local\n"
          "• **Gateway Status:** " + String((gatewayConnected && identified) ? "Connected" : "Disconnected") + "\n"
          "• **USB VBUS:** " + String((float)readUsbVbusMilliVolts() / 1000.0f, 3) + " V\n"
          "• **Firmware:** https://github.com/dogma2u/minime-esp32-discord-bot";

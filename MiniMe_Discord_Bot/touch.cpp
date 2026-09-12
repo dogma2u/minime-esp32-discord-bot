@@ -1,5 +1,4 @@
 #include "minime.h"
-#include <esp_idf_version.h>
 
 unsigned long lastTouchWakeMillis = 0;
 bool touchWasActive = false;
@@ -105,8 +104,9 @@ void updateTouchIdleAvg(uint32_t compensated) {
 }
 
 void configureTouchHardware() {
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
-  touchSetTiming(0.5f, 100); // Arduino ESP32 3.x / IDF 5.5+
+  // Arduino-ESP32 3.x: touchSetTiming. Older 2.x: touchSetCycles.
+#if defined(ESP_ARDUINO_VERSION) && (ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0))
+  touchSetTiming(0.5f, 100);
 #else
   touchSetCycles(1, 100);
 #endif

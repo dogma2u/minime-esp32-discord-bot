@@ -1,29 +1,15 @@
 #include "minime.h"
-#include <driver/ledc.h>
 
 OneWire oneWire(PIN_DS18B20);
 DallasTemperature sensors(&oneWire);
 Adafruit_NeoPixel pixels(1, RGB_LED_PIN, NEO_GRB + NEO_KHZ800);
 
+// Arduino-ESP32 3.x LEDC API (no driver/ledc.h)
+static const int SERVO_LEDC_BITS = 14;
+static const double SERVO_LEDC_HZ = 50.0;
+
 void setupServo() {
-  ledc_timer_config_t timer = {
-    .speed_mode       = LEDC_LOW_SPEED_MODE,
-    .duty_resolution  = LEDC_TIMER_14_BIT,
-    .timer_num        = LEDC_TIMER_0,
-    .freq_hz          = 50,
-    .clk_cfg          = LEDC_AUTO_CLK
-  };
-  ledc_timer_config(&timer);
-  ledc_channel_config_t channel = {
-    .gpio_num         = PIN_SERVO,
-    .speed_mode       = LEDC_LOW_SPEED_MODE,
-    .channel          = LEDC_CHANNEL_0,
-    .intr_type        = LEDC_INTR_DISABLE,
-    .timer_sel        = LEDC_TIMER_0,
-    .duty             = 0,
-    .hpoint           = 0
-  };
-  ledc_channel_config(&channel);
+  ledcAttach(PIN_SERVO, SERVO_LEDC_HZ, SERVO_LEDC_BITS);
 }
 
 void setServoAngle(int angleDeg) {
@@ -31,10 +17,9 @@ void setServoAngle(int angleDeg) {
   if (angleDeg > 90) angleDeg = 90;
   lastServoDeg = angleDeg;
   int pulseUs = 500 + (1500 * angleDeg / 90);
-  uint32_t max_duty = (1 << 14) - 1;
-  uint32_t duty = (pulseUs * max_duty) / 20000;
-  ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, duty);
-  ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+  uint32_t max_duty = (1UL << SERVO_LEDC_BITS) - 1UL;
+  uint32_t duty = (pulseUs * max_duty) / 20000UL;
+  ledcWrite(PIN_SERVO, duty);
 }
 
 void setupPins() {

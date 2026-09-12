@@ -1,5 +1,8 @@
 #include "minime.h"
 
+// Declared in minime.h / ota.cpp — keep if sketch-folder minime.h is behind
+String otaStatusText();
+
 unsigned long lastSysInfoMillis = 0;
 int lastSentHour = -1;
 bool askNeedPost = false;
@@ -423,7 +426,8 @@ void handleCommand(const String& content, const String& authorId, const String& 
       "• `!led on/off` / `!led <r> <g> <b>` — RGB NeoPixel (0–255 per channel).\n"
       "• `!servo <0-90>` — Moves the servo motor to a specific angle.\n"
       "• `!set1 on` / `!set1 off` — Controls digital output pin 1.\n"
-      "• `!set2 on` / `!set2 off` — Controls digital output pin 2.";
+      "• `!set2 on` / `!set2 off` — Controls digital output pin 2.\n"
+      "• `!ota` — Wi-Fi firmware update info (IP / hostname).";
     sendDiscordMessage(channelId, helpMsg);
     showTransient("Help", "Command Sent");
     return;
@@ -528,11 +532,16 @@ void handleCommand(const String& content, const String& authorId, const String& 
     char d = cmdWord.charAt(4);
     if (d == '1' || d == '2') setN = d - '0';
   }
-  if (cmdWord == "!led" || setN != 0 || cmdWord == "!servo") {
+  if (cmdWord == "!led" || setN != 0 || cmdWord == "!servo" || cmdWord == "!ota") {
     if (!isOwner(authorId)) {
       if (!isDM) {
         sendDiscordMessage(channelId, "You are not allowed to use this command.");
       }
+      return;
+    }
+    if (cmdWord == "!ota") {
+      sendDiscordMessage(channelId, otaStatusText());
+      showTransient("OTA", WiFi.localIP().toString());
       return;
     }
     if (cmdWord == "!led") {

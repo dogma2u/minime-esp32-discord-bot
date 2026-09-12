@@ -18,4 +18,8 @@
 #define TARGET_CHANNEL_ID    "TARGET_CHANNEL_ID"    // commands + auto posts
 #define TARGET_CHANNEL_ID1   "TARGET_CHANNEL_ID1"   // second command channel
 
+// Wi-Fi firmware update (ArduinoOTA). Pick a real password in secrets.h.
+#define OTA_HOSTNAME         "minime"
+#define OTA_PASSWORD         "change-me-ota"
+
 #endif

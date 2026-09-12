@@ -4,11 +4,137 @@ WebSocketsClient gatewayWS;
 DynamicJsonDocument* gwDoc = nullptr;
 bool gatewayConnected     = false;
 bool identified           = false;
+bool gotHello             = false;
 int  heartbeatIntervalMs   = 0;
 unsigned long lastHeartbeatMillis = 0;
 int lastSeq               = 0;
+String sessionId;
+bool canResume            = false;
 unsigned long lastBotActivityMillis = 0;
 uint8_t botDiscordStatus = 0;
+
+// Serial drop/reconnect diagnostics
+static const uint8_t GW_LOG_MAX = 40;
+static String gwLog[GW_LOG_MAX];
+static uint8_t gwLogCount = 0;
+static String gwLogLastAdded;
+static String gwDropStartEvent;
+static bool gwInDropState = false;
+static unsigned long gwLastDropRemindMillis = 0;
+static unsigned long gwLastFullLogMillis = 0;
+static unsigned long gwReconnectIntervalMs = 5000;
+static unsigned long gwLastWifiKickMillis = 0;
+static String gwLastDropKind;
+static bool gwLoggedConnectDuringDrop = false;
+
+static String gwStamp() {
+  return String(millis());
+}
+
+static void gwLogAppend(const String& ev) {
+  if (gwLogCount > 0 && gwLogLastAdded == ev) return;
+  gwLogLastAdded = ev;
+  String line = String("[") + gwStamp() + "] " + ev;
+  MmLog.print("[GW] ");
+  MmLog.println(line);
+  if (gwLogCount < GW_LOG_MAX) {
+    gwLog[gwLogCount++] = line;
+  } else {
+    for (uint8_t i = 1; i < GW_LOG_MAX; i++) gwLog[i - 1] = gwLog[i];
+    gwLog[GW_LOG_MAX - 1] = line;
+  }
+}
+
+// kind = coarse category (dedupe); detail = full text for first DROP_START / new kinds
+static void gwNoteDrop(const String& kind, const String& detail) {
+  if (!gwInDropState) {
+    gwInDropState = true;
+    gwDropStartEvent = detail;
+    gwLastDropKind = kind;
+    gwLastDropRemindMillis = millis();
+    gwLogAppend(String("DROP_START: ") + detail);
+  } else if (kind != gwLastDropKind) {
+    gwLastDropKind = kind;
+    gwLogAppend(detail);
+  }
+}
+
+static void gwClearDropState() {
+  if (!gwInDropState) return;
+  gwLogAppend("RECOVERED");
+  gwInDropState = false;
+  gwDropStartEvent = "";
+  gwLastDropKind = "";
+  gwLoggedConnectDuringDrop = false;
+}
+
+void gwSerialService() {
+  unsigned long now = millis();
+  // Alive pulse so you can confirm the COM port is live even with no drop.
+  static unsigned long gwLastAliveMillis = 0;
+  if (gwLastAliveMillis == 0) gwLastAliveMillis = now;
+  if (now - gwLastAliveMillis >= 15000UL) {
+    gwLastAliveMillis = now;
+    MmLog.print("[GW] alive up_ms=");
+    MmLog.print(now);
+    MmLog.print(" wifi=");
+    MmLog.print(WiFi.status() == WL_CONNECTED ? "up" : "DOWN");
+    MmLog.print(" rssi=");
+    MmLog.print(WiFi.RSSI());
+    MmLog.print(" gw=");
+    MmLog.print(gatewayConnected ? "1" : "0");
+    MmLog.print(" id=");
+    MmLog.print(identified ? "1" : "0");
+    MmLog.print(" drop=");
+    MmLog.println(gwInDropState ? "1" : "0");
+  }
+  if (gwInDropState && gwDropStartEvent.length() &&
+      (now - gwLastDropRemindMillis >= 5000UL)) {
+    gwLastDropRemindMillis = now;
+    MmLog.print("[GW] DROP still (started): ");
+    MmLog.println(gwDropStartEvent);
+  }
+  if (now - gwLastFullLogMillis >= 60000UL) {
+    gwLastFullLogMillis = now;
+    MmLog.println("[GW] === FULL LOG ===");
+    if (gwLogCount == 0) {
+      MmLog.println("  (empty)");
+    } else {
+      for (uint8_t i = 0; i < gwLogCount; i++) {
+        MmLog.print("  ");
+        MmLog.println(gwLog[i]);
+      }
+    }
+    if (gwInDropState) {
+      MmLog.print("  drop_start=");
+      MmLog.println(gwDropStartEvent);
+    }
+    MmLog.println("[GW] === END LOG ===");
+  }
+}
+
+static void gwSetReconnectBackoff(bool reset) {
+  if (reset) {
+    gwReconnectIntervalMs = 5000;
+  } else {
+    if (gwReconnectIntervalMs < 60000UL) {
+      unsigned long next = gwReconnectIntervalMs * 2UL;
+      gwReconnectIntervalMs = (next > 60000UL) ? 60000UL : next;
+    }
+  }
+  gatewayWS.setReconnectInterval(gwReconnectIntervalMs);
+  gwLogAppend(String("RECONNECT_INTERVAL_MS=") + String(gwReconnectIntervalMs));
+}
+
+static void ensureWifiForGateway() {
+  if (WiFi.status() == WL_CONNECTED) return;
+  unsigned long now = millis();
+  if (now - gwLastWifiKickMillis < 10000UL) return;
+  gwLastWifiKickMillis = now;
+  gwLogAppend("WIFI_RETRY begin()");
+  WiFi.disconnect();
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+}
 
 void gwSendJson(JsonDocument& doc) {
   String payload;
@@ -105,6 +231,18 @@ void sendIdentify() {
   gwSendJson(doc);
   lastBotActivityMillis = millis();
   botDiscordStatus = 2;
+  gwLogAppend("SENT_IDENTIFY");
+}
+
+void sendResume() {
+  StaticJsonDocument<512> doc;
+  doc["op"] = 6;
+  JsonObject d = doc.createNestedObject("d");
+  d["token"] = BOT_TOKEN;
+  d["session_id"] = sessionId;
+  d["seq"] = lastSeq;
+  gwSendJson(doc);
+  gwLogAppend(String("SENT_RESUME seq=") + String(lastSeq));
 }
 
 void sendHeartbeat() {
@@ -120,7 +258,14 @@ void sendHeartbeat() {
 
 void pumpGateway() {
   gatewayWS.loop();
-  if (heartbeatIntervalMs > 0 && gatewayConnected && identified) {
+  gwSerialService();
+
+  if (!gatewayConnected && WiFi.status() != WL_CONNECTED) {
+    ensureWifiForGateway();
+  }
+
+  // Heartbeat after Hello (Discord), not only after READY.
+  if (heartbeatIntervalMs > 0 && gatewayConnected && gotHello) {
     unsigned long now = millis();
     if (now - lastHeartbeatMillis >= (unsigned long)heartbeatIntervalMs) {
       lastHeartbeatMillis = now;
@@ -131,16 +276,61 @@ void pumpGateway() {
 
 void gatewayEvent(WStype_t type, uint8_t* payload, size_t length) {
   switch (type) {
-    case WStype_DISCONNECTED:
+    case WStype_DISCONNECTED: {
       gatewayConnected = false;
       identified       = false;
+      gotHello         = false;
       botDiscordStatus = 0;
+      heartbeatIntervalMs = 0;
+
+      bool wifiUp = (WiFi.status() == WL_CONNECTED);
+      String kind = wifiUp ? "WS_DISCONNECTED_WIFI_UP" : "WS_DISCONNECTED_WIFI_DOWN";
+      String detail = kind;
+      if (payload && length > 0) {
+        detail += " reason=";
+        size_t n = length < 80 ? length : 80;
+        for (size_t i = 0; i < n; i++) {
+          char c = (char)payload[i];
+          if (c >= 32 && c < 127) detail += c;
+        }
+      }
+      detail += " rssi=";
+      detail += String(WiFi.RSSI());
+      detail += " seq=";
+      detail += String(lastSeq);
+      detail += " session=";
+      detail += sessionId.length() ? "yes" : "no";
+      detail += " canResume=";
+      detail += canResume ? "1" : "0";
+
+      gwNoteDrop(kind, detail);
+      gwLoggedConnectDuringDrop = false;
+      gwSetReconnectBackoff(false);
+      ensureWifiForGateway();
       showTransient("Gateway", "Disconnected");
       break;
+    }
     case WStype_CONNECTED:
       gatewayConnected = true;
+      if (!gwInDropState || !gwLoggedConnectDuringDrop) {
+        gwLogAppend("WS_CONNECTED");
+        if (gwInDropState) gwLoggedConnectDuringDrop = true;
+      }
       showTransient("Gateway", "Connected");
       break;
+    case WStype_ERROR: {
+      String detail = "WS_ERROR";
+      if (payload && length > 0) {
+        detail += " ";
+        size_t n = length < 80 ? length : 80;
+        for (size_t i = 0; i < n; i++) {
+          char c = (char)payload[i];
+          if (c >= 32 && c < 127) detail += c;
+        }
+      }
+      gwNoteDrop("WS_ERROR", detail);
+      break;
+    }
     case WStype_TEXT: {
       static StaticJsonDocument<384> gwFilter;
       static bool gwFilterInit = false;
@@ -149,6 +339,7 @@ void gatewayEvent(WStype_t type, uint8_t* payload, size_t length) {
         gwFilter["s"] = true;
         gwFilter["t"] = true;
         gwFilter["d"]["heartbeat_interval"] = true;
+        gwFilter["d"]["session_id"] = true;
         gwFilter["d"]["status"] = true;
         gwFilter["d"]["user"]["id"] = true;
         gwFilter["d"]["user"]["username"] = true;
@@ -170,29 +361,86 @@ void gatewayEvent(WStype_t type, uint8_t* payload, size_t length) {
       if (!gwDoc) return;
       gwDoc->clear();
       DeserializationError err = deserializeJson(*gwDoc, payload, length, DeserializationOption::Filter(gwFilter));
-      if (err) return;
+      if (err) {
+        gwLogAppend(String("JSON_ERR ") + err.c_str());
+        return;
+      }
       int op = (*gwDoc)["op"] | -1;
       if (gwDoc->containsKey("s") && !(*gwDoc)["s"].isNull()) {
         lastSeq = (*gwDoc)["s"].as<int>();
       }
+
+      // Hello: start HB, then Resume or Identify
       if (op == 10) {
         heartbeatIntervalMs = (*gwDoc)["d"]["heartbeat_interval"] | 0;
         lastHeartbeatMillis = millis();
-        sendIdentify();
-        identified = true;
+        gotHello = true;
+        gwLogAppend(String("OP10_HELLO hb_ms=") + String(heartbeatIntervalMs));
+        if (canResume && sessionId.length() > 0 && lastSeq > 0) {
+          sendResume();
+        } else {
+          sendIdentify();
+        }
         return;
       }
-      if (op == 11) return;
+
+      // Reconnect: close and Resume on next Hello
+      if (op == 7) {
+        canResume = sessionId.length() > 0;
+        gwNoteDrop("OP7_RECONNECT", "OP7_RECONNECT");
+        showTransient("Gateway", "Op7 reconnect");
+        gatewayWS.disconnect();
+        return;
+      }
+
+      // Invalid Session: d is boolean (parse without filter)
+      if (op == 9) {
+        bool resumable = false;
+        StaticJsonDocument<96> small;
+        if (!deserializeJson(small, payload, length)) {
+          resumable = small["d"] | false;
+        }
+        String detail = String("OP9_INVALID_SESSION resumable=") + (resumable ? "1" : "0");
+        gwNoteDrop(detail, detail);
+        if (!resumable) {
+          sessionId = "";
+          lastSeq = 0;
+          canResume = false;
+        } else {
+          canResume = sessionId.length() > 0;
+        }
+        showTransient("Gateway", "Op9 session");
+        gatewayWS.disconnect();
+        return;
+      }
+
+      if (op == 11) return; // Heartbeat ACK
+
       if (op == 0) {
         const char* t = (*gwDoc)["t"];
         if (!t) return;
         if (strcmp(t, "READY") == 0) {
+          identified = true;
+          sessionId = (*gwDoc)["d"]["session_id"] | "";
+          canResume = sessionId.length() > 0;
+          gwSetReconnectBackoff(true);
+          gwClearDropState();
+          gwLogAppend(String("READY session=") + (canResume ? "yes" : "no"));
           JsonArray guilds = (*gwDoc)["d"]["guilds"].as<JsonArray>();
           if (!guilds.isNull()) {
             for (JsonObject g : guilds) {
               applyPresencesArray(g["presences"].as<JsonArray>());
             }
           }
+          requestTrackedUserPresences();
+          return;
+        }
+        if (strcmp(t, "RESUMED") == 0) {
+          identified = true;
+          canResume = sessionId.length() > 0;
+          gwSetReconnectBackoff(true);
+          gwClearDropState();
+          gwLogAppend("RESUMED");
           requestTrackedUserPresences();
           return;
         }

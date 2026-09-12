@@ -1,6 +1,13 @@
 # Changelog
 
-Older sections describe that release as shipped. Current firmware and docs are **0.4.40** (see `VERSION` and README).
+Older sections describe that release as shipped. Current firmware and docs are **0.4.47** (see `VERSION` and README).
+
+## 0.4.47
+
+- **Arduino IDE:** board **must** be **ESP32S3 Dev Module** (documented in README + sketch header).
+- Wi‑Fi **ArduinoOTA** (`ota.cpp`): password in secrets, owner `!ota`, OLED progress; Serial Monitor remains USB+COM only.
+- Gateway harden: Resume / op7 / op9, reconnect backoff, Wi‑Fi retry; Serial drop log (5s remind / 60s dump) via `serial_log.cpp`.
+- Servo uses Arduino 3.x `ledcAttach`/`ledcWrite` (no `driver/ledc.h`); touch uses `ESP_ARDUINO_VERSION` (no `esp_idf_version.h`).
 
 ## 0.4.40
 

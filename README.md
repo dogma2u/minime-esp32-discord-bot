@@ -12,7 +12,7 @@ MiniMe is firmware for a **WeAct Studio ESP32-S3-N16R8** that runs a Discord bot
 
 *Breadboard prototype: WeAct Studio ESP32-S3-N16R8, 128×128 SSD1327 (GND / VCC / SCL / SDA), two discrete LEDs, GPIO 4 touch wake pad (yellow wire loop), and DS18B20 on GPIO 10. Sensor fail on the OLED is `T:--Error--`.*
 
-**Status:** working breadboard firmware · **v0.4.40** · green CI compile · PCB / desk case planned (see Ongoing project).
+**Status:** working breadboard firmware · **v0.4.47** · green CI compile · PCB / desk case planned (see Ongoing project).
 
 Current version: see `VERSION` and `CHANGELOG.md`. License: see `LICENSE` (MIT for original MiniMe files only).
 
@@ -23,7 +23,7 @@ AI helped with firmware edits, multi-file layout, and GitHub updates. I owned th
 
 MiniMe is still in progress. Working board firmware is on this repo; more hardware and features are planned:
 
-- **Wireless firmware updates** — update the ESP32 over the network without a USB cable each time
+- **Wireless firmware updates** — ArduinoOTA over Wi‑Fi (owner `!ota`); first flash still USB
 - **Mention / DM indicators on `set1` / `set2`** — drive those outputs when a configured user ID (normally `OWNER_ID_STR`) is @mentioned or receives a direct message (desk LEDs or similar)
 - **PCB and desk case** — move off the breadboard onto a custom board and enclosure that can sit on my desk
 
@@ -50,6 +50,7 @@ Same list Discord shows for `!help`:
 **Owner-only** (`OWNER_ID_STR`):
 
 - `!led on/off` / `!led <r> <g> <b>` — RGB NeoPixel (0–255 per channel); GPIO 48; `on` = 255 255 255
+- `!ota` — Wi‑Fi OTA info (IP / hostname); Serial Monitor is USB+COM only
 - `!servo <0-90>` — servo angle (updates the `Srv:` bar)
 - `!set1 on` / `!set1 off` — digital output pin 1
 - `!set2 on` / `!set2 off` — digital output pin 2
@@ -189,6 +190,8 @@ Secrets live in **`MiniMe_Discord_Bot/secrets.h`** (gitignored). No sketch sourc
 #define OWNER_ID_STR         "OWNER_ID_STR"         // GPIO / servo
 #define TARGET_CHANNEL_ID    "TARGET_CHANNEL_ID"    // commands + auto posts
 #define TARGET_CHANNEL_ID1   "TARGET_CHANNEL_ID1"   // second command channel
+#define OTA_HOSTNAME         "minime"
+#define OTA_PASSWORD         "change-me-ota"
 ```
 
 Use `#define` (not `const char*`) so every `.cpp` can include `secrets.h` without linker “multiple definition” errors.
@@ -201,9 +204,11 @@ Use `#define` (not `const char*`) so every `.cpp` can include `secrets.h` withou
 | `NASA_API_KEY` | NASA APOD for `!apod` |
 | `DEEPSEEK_API_KEY` | DeepSeek for `!ask` |
 | `BOT_GUILD_ID` | One guild to load members from at boot (numeric snowflake) |
-| `OWNER_ID_STR` | Who can run LED / set1 / set2 / servo |
+| `OWNER_ID_STR` | Who can run LED / set1 / set2 / servo / `!ota` |
 | `TARGET_CHANNEL_ID` | Commands + auto sysinfo / scheduled summaries |
 | `TARGET_CHANNEL_ID1` | Second channel where commands are allowed |
+| `OTA_HOSTNAME` | ArduinoOTA mDNS name (`minime.local`) |
+| `OTA_PASSWORD` | Password you invent for Wi‑Fi firmware upload |
 
 IDs are **digits only**. Paste them as C strings, for example `"123456789012345678"`.
 
@@ -409,21 +414,39 @@ After changing the threshold, re-upload and tap the pad: the OLED should wake on
 
 GitHub Actions compiles this sketch on every push to `master` (see the **Compile** badge at the top). That checks a clean build only; it does not upload to the board. Your breadboard photo and Discord use still prove it runs.
 
+**Board must be set to: ESP32S3 Dev Module** (Tools → Board → esp32 → **ESP32S3 Dev Module**).  
+Do not pick a generic “ESP32 Dev Module” or other chip. Wrong board → missing headers / bad flash / no Serial on USB‑C.
+
+Hardware is a **WeAct Studio ESP32-S3-N16R8** (N16 = 16MB flash, R8 = 8MB PSRAM). Use **ESP32S3 Dev Module** with the Tools below.
+
 1. Install [Arduino IDE](https://www.arduino.cc/en/software) and the **esp32** board package (Espressif).
-2. Board: **ESP32-S3**. This hardware is a **WeAct Studio ESP32-S3-N16R8** (N16 = 16MB flash, R8 = 8MB PSRAM).
-3. Tools: enable **OPI PSRAM** (8MB) and a **16MB** flash partition scheme that matches the N16R8.
+2. **Tools → Board → ESP32S3 Dev Module** (required).
+3. Tools (typical for this WeAct board):
+   - **USB CDC On Boot:** Enabled (Serial Monitor on the USB‑C COM port)
+   - **USB Mode:** Hardware CDC and JTAG (or USB‑OTG CDC)
+   - **PSRAM:** OPI PSRAM
+   - **Flash Size:** 16MB
+   - **Partition Scheme:** a **16MB** scheme that includes **OTA** (dual app slots) if you use Wi‑Fi update
 4. Libraries (Library Manager):
    - WebSockets (by Markus Sattler)
-   - ArduinoJson
+   - ArduinoJson **6.x** (sketch uses `DynamicJsonDocument`)
    - U8g2
    - OneWire
    - DallasTemperature
    - Adafruit NeoPixel
    - NTPClient
 5. Open `MiniMe_Discord_Bot/MiniMe_Discord_Bot.ino` (Arduino IDE loads all `.cpp` files in that folder automatically).
-6. Copy `secrets.example.h` to `secrets.h` and fill in Wi‑Fi, token, keys, and IDs.
-7. Upload. The firmware has no Serial logging; use Discord `!help` and the OLED to confirm it is running.
+6. Copy `secrets.example.h` to `secrets.h` and fill in Wi‑Fi, token, keys, IDs, plus `OTA_HOSTNAME` / `OTA_PASSWORD`.
+7. First upload via **USB** + COM. Serial Monitor **115200** shows `[GW]` / `[OTA]` lines.
 8. In Discord, try `!help`. Tap the GPIO 4 pad to wake the OLED after it dims off.
+
+### Wi‑Fi OTA (after the first USB flash)
+
+1. Same Wi‑Fi as your PC. Owner: `!ota` for IP.
+2. **Tools → Port →** the **network** port (`minime` / board IP) — not COM.
+3. Upload; enter `OTA_PASSWORD` when asked.
+4. Serial Monitor still needs **USB + COM** (network port has no Monitor).
+5. If “Could not connect” to the IP: allow Arduino IDE through Windows Firewall; confirm Serial shows `[OTA] ready`.
 
 Do not enable `heap_caps_malloc_extmem_enable` for small allocations. Wi‑Fi / TLS in PSRAM can crash this board. Gateway JSON (`256KB`) is allocated in PSRAM on purpose.
 
