@@ -1,6 +1,6 @@
 # MiniMe — a Discord bot on ESP32-S3
 
-[![Compile](https://github.com/dogma2u/minime-esp32-discord-bot/actions/workflows/compile.yml/badge.svg)](https://github.com/dogma2u/minime-esp32-discord-bot/actions/workflows/compile.yml)
+[![Compile](https://github.com/K9DTV/minime-esp32-discord-bot/actions/workflows/compile.yml/badge.svg)](https://github.com/K9DTV/minime-esp32-discord-bot/actions/workflows/compile.yml)
 
 **Project page:** https://k9dtv.com/project-minime.html
 
