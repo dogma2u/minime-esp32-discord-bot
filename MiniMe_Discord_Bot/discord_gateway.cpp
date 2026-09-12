@@ -203,9 +203,10 @@ void updateBotPresenceIdle() {
   sendBotPresence("idle", true);
 }
 
-// 80 MHz only when OLED off and Discord Idle. Hold 240 during OTA.
+// 100 MHz only when OLED off, Discord Idle, and web UI is not serving.
+// Dropping CPU with the LAN web server up breaks Wi-Fi / browser access.
 void applyCpuForIdleState() {
-  if (otaIsBusy()) {
+  if (otaIsBusy() || webUiKeepsCpuActive()) {
     if (getCpuFrequencyMhz() != CPU_MHZ_ACTIVE) setCpuFrequencyMhz(CPU_MHZ_ACTIVE);
     return;
   }
@@ -355,6 +356,7 @@ void gatewayEvent(WStype_t type, uint8_t* payload, size_t length) {
         gwFilter["d"]["author"]["username"] = true;
         gwFilter["d"]["author"]["global_name"] = true;
         gwFilter["d"]["author"]["bot"] = true;
+        gwFilter["d"]["mentions"][0]["id"] = true;
         gwFilter["d"]["presences"][0]["user"]["id"] = true;
         gwFilter["d"]["presences"][0]["status"] = true;
         gwFilter["d"]["guilds"][0]["presences"][0]["user"]["id"] = true;
@@ -470,6 +472,32 @@ void gatewayEvent(WStype_t type, uint8_t* payload, size_t length) {
           String authorId  = d["author"]["id"].as<String>();
           String authorName = discordDisplayName(d["author"]);
           bool isDM = d["guild_id"].isNull();
+
+          // Owner alert outputs: DM to bot -> set1 @ 10 Hz; @owner mention -> set2 @ 10 Hz
+          if (isDM) {
+            startSet1Flash();
+          } else {
+            bool ownerMentioned = false;
+            JsonArray mentions = d["mentions"].as<JsonArray>();
+            if (!mentions.isNull()) {
+              for (JsonObject m : mentions) {
+                const char* mid = m["id"] | "";
+                if (mid[0] && strcmp(mid, OWNER_ID_STR) == 0) {
+                  ownerMentioned = true;
+                  break;
+                }
+              }
+            }
+            if (!ownerMentioned) {
+              String ping = String("<@") + OWNER_ID_STR + ">";
+              String pingNick = String("<@!") + OWNER_ID_STR + ">";
+              if (content.indexOf(ping) >= 0 || content.indexOf(pingNick) >= 0) {
+                ownerMentioned = true;
+              }
+            }
+            if (ownerMentioned) startSet2Flash();
+          }
+
           handleCommand(content, authorId, authorName, channelId, isDM);
         }
       }

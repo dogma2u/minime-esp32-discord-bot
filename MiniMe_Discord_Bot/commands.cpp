@@ -427,6 +427,7 @@ void handleCommand(const String& content, const String& authorId, const String& 
       "• `!servo <0-90>` — Moves the servo motor to a specific angle.\n"
       "• `!set1 on` / `!set1 off` — Controls digital output pin 1.\n"
       "• `!set2 on` / `!set2 off` — Controls digital output pin 2.\n"
+      "• `!clear` — Stops set1/set2 flash and forces both outputs off.\n"
       "• `!ota` — Wi-Fi firmware update info (IP / hostname).";
     sendDiscordMessage(channelId, helpMsg);
     showTransient("Help", "Command Sent");
@@ -532,11 +533,17 @@ void handleCommand(const String& content, const String& authorId, const String& 
     char d = cmdWord.charAt(4);
     if (d == '1' || d == '2') setN = d - '0';
   }
-  if (cmdWord == "!led" || setN != 0 || cmdWord == "!servo" || cmdWord == "!ota") {
+  if (cmdWord == "!led" || setN != 0 || cmdWord == "!servo" || cmdWord == "!ota" || cmdWord == "!clear") {
     if (!isOwner(authorId)) {
       if (!isDM) {
         sendDiscordMessage(channelId, "You are not allowed to use this command.");
       }
+      return;
+    }
+    if (cmdWord == "!clear") {
+      clearSetOutputs();
+      sendDiscordMessage(channelId, "set1/set2 cleared (off)");
+      showTransient("clear", "set1 set2 OFF");
       return;
     }
     if (cmdWord == "!ota") {
@@ -573,13 +580,13 @@ void handleCommand(const String& content, const String& authorId, const String& 
     if (setN != 0) {
       String a = args;
       a.toLowerCase();
-      int pin = (setN == 1) ? PIN_SET1 : PIN_SET2;
       if (a != "on" && a != "off") {
         sendDiscordMessage(channelId, "Usage: !set1 on/off  or  !set2 on/off");
         return;
       }
       bool on = (a == "on");
-      digitalWrite(pin, on ? HIGH : LOW);
+      if (setN == 1) stopSet1Flash(on);
+      else stopSet2Flash(on);
       String label = "set" + String(setN);
       String val = on ? "ON" : "OFF";
       sendDiscordMessage(channelId, label + " " + val);

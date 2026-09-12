@@ -10,7 +10,13 @@ MiniMe is firmware for a **WeAct Studio ESP32-S3-N16R8** that runs a Discord bot
 
 *Breadboard prototype: WeAct Studio ESP32-S3-N16R8, 128x128 SSD1327 (GND / VCC / SCL / SDA), two discrete LEDs, GPIO 4 touch wake pad (yellow wire loop), and DS18B20 on GPIO 10. Sensor fail on the OLED is `T:--Error--`.*
 
-**Status:** working breadboard firmware · **v0.4.40** · green CI compile · PCB / desk case planned (see Ongoing project).
+**Status:** working breadboard firmware · **v0.4.85** · green CI compile · PCB / desk case planned (see Ongoing project).
+
+After Wi-Fi connects, MiniMe also serves a LAN web dashboard at `http://<board-ip>/` (Display, SysInfo, LOG, Serial).
+
+![MiniMe LAN web UI — Display meters aligned, SysInfo, LOG, Serial](docs/web-ui-display.png)
+
+*LAN web UI (v0.4.85): Sig / Heap / Srv bars share one left edge and stop at the Display panel edge.*
 
 Current version: see `VERSION` and `CHANGELOG.md`. License: see `LICENSE` (MIT for original MiniMe files only).
 
@@ -22,7 +28,7 @@ AI helped with firmware edits, multi-file layout, and GitHub updates. I owned th
 MiniMe is still in progress. Working board firmware is on this repo; more hardware and features are planned:
 
 - **Wireless firmware updates** — update the ESP32 over the network without a USB cable each time
-- **Mention / DM indicators on `set1` / `set2`** — drive those outputs when a configured user ID (normally `OWNER_ID_STR`) is @mentioned or receives a direct message (desk LEDs or similar)
+- **Mention / DM indicators on `set1` / `set2`** — DM to the bot flashes **set1** at 10 Hz; @mention of `OWNER_ID_STR` flashes **set2** at 10 Hz. Owner `!clear` turns both off.
 - **PCB and desk case** — move off the breadboard onto a custom board and enclosure that can sit on my desk
 
 ---
@@ -51,6 +57,7 @@ Same list Discord shows for `!help`:
 - `!servo <0-90>` — servo angle (updates the `Srv:` bar)
 - `!set1 on` / `!set1 off` — digital output pin 1
 - `!set2 on` / `!set2 off` — digital output pin 2
+- `!clear` — stop set1/set2 flash and force both off
 
 ### Automatic posts
 
@@ -163,7 +170,7 @@ These **do not** reset the timer: signal / heap / servo bars, clock, uptime/temp
 
 These **wake** the panel and restart the 1-minute timer: **touch on the wake pad (GPIO 4)**, Discord commands, gateway connect/disconnect, `!display`, scheduled reports, and other status lines on rows 15-16. Presence updates for the eight user rows **do not** wake the panel.
 
-When the OLED is off **and** Discord status is Idle, CPU is **80 MHz**; otherwise **240 MHz**.
+When the OLED is off **and** Discord status is Idle, CPU is **100 MHz**; otherwise **240 MHz**.
 
 </details>
 
@@ -328,7 +335,7 @@ Display: **SSD1327**, **128x128** pixels, I2C.
 | Touch wake pad | 4 |
 | USB VBUS ADC (divider) | 1 |
 
-OLED module labels: **GND, VCC, SCL, SDA**. The panel is **128x128**. Change pins in `config.h` if your wiring differs.
+OLED module labels: **GND, VCC, SCL, SDA**. The panel is **128x128**. Change pins in `minime_config.h` if your wiring differs.
 
 ### RGB NeoPixel (GPIO 48)
 
@@ -375,12 +382,12 @@ USB port voltage moves the raw touch numbers. MiniMe reads VBUS through a **divi
 
 1. **Do not** connect USB 5V directly to GPIO 1 (max ~3.3 V on the pin).
 2. Wire: **USB 5V (VBUS)** → **10 kΩ** → **GPIO 1** → **10 kΩ** → **GND**.
-3. Change `PIN_USB_VBUS_ADC` / `USB_VBUS_R_HI` / `USB_VBUS_R_LO` in `config.h` if your divider or pin differs.
+3. Change `PIN_USB_VBUS_ADC` / `USB_VBUS_R_HI` / `USB_VBUS_R_LO` in `minime_config.h` if your divider or pin differs.
 4. `!sysinfo` reports **USB VBUS** in volts to millivolt resolution (about **5.000 V** with a 1:1 divider on a healthy 5 V port). An unwired pin will read junk; compensation is skipped if the reading is below **1000 mV**. The ADC is sampled at most every **500 ms**.
 
 ### How it works in firmware
 
-- **`PIN_TOUCH`** is **4** (change in `config.h` if you use a different touch-capable GPIO).
+- **`PIN_TOUCH`** is **4** (change in `minime_config.h` if you use a different touch-capable GPIO).
 - At boot, **`setupTouch()`** runs **after Wi-Fi and I2C**. It samples USB VBUS, then fills a **16-sample rolling average** of voltage-compensated idle touch readings (`touchIdleAvg`).
 - Trip is always **`touchIdleAvg + TOUCH_THRESHOLD`** (default gap **2000**). Idle samples below trip keep updating the rolling window; a tap does not.
 - **`loop()`** calls **`pollTouchWake()`** (no touch interrupt). A rising edge, after a **300 ms** debounce, uses the same wake path as a Discord event (full contrast, 1-minute idle timer restarted).
@@ -408,22 +415,38 @@ After changing the threshold, re-upload and tap the pad: the OLED should wake on
 GitHub Actions compiles this sketch on every push to `master` (see the **Compile** badge at the top). That checks a clean build only; it does not upload to the board. Your breadboard photo and Discord use still prove it runs.
 
 1. Install [Arduino IDE](https://www.arduino.cc/en/software) and the **esp32** board package (Espressif).
-2. Board: **ESP32-S3**. This hardware is a **WeAct Studio ESP32-S3-N16R8** (N16 = 16MB flash, R8 = 8MB PSRAM).
-3. Tools: enable **OPI PSRAM** (8MB) and a **16MB** flash partition scheme that matches the N16R8.
-4. Libraries (Library Manager):
-  - WebSockets (by Markus Sattler)
-  - ArduinoJson
-  - U8g2
-  - OneWire
-  - DallasTemperature
-  - Adafruit NeoPixel
-  - NTPClient
-5. Open `MiniMe_Discord_Bot/MiniMe_Discord_Bot.ino` (Arduino IDE loads all `.cpp` files in that folder automatically).
-6. Copy `secrets.example.h` to `secrets.h` and fill in Wi-Fi, token, keys, and IDs.
-7. Upload. The firmware has no Serial logging; use Discord `!help` and the OLED to confirm it is running.
-8. In Discord, try `!help`. Tap the GPIO 4 pad to wake the OLED after it dims off.
+2. Open **only** `MiniMe_Discord_Bot/MiniMe_Discord_Bot.ino` from a folder that contains that single `.ino` plus the `.cpp` / `.h` files and `partitions.csv` (do not leave a second `Discord_*.ino` in the same folder).
+3. Copy `secrets.example.h` to `secrets.h` and fill in Wi-Fi, token, keys, and IDs.
+4. Set **Tools** as in the table below for the **WeAct Studio ESP32-S3-N16R8**.
+5. Libraries (Library Manager): WebSockets (Markus Sattler), ArduinoJson, U8g2, OneWire, DallasTemperature, Adafruit NeoPixel, NTPClient.
+6. Upload. Confirm with Discord `!help` and the OLED. Tap GPIO 4 to wake the panel after it dims.
 
-Do not enable `heap_caps_malloc_extmem_enable` for small allocations. Wi-Fi / TLS in PSRAM can crash this board. Gateway JSON (`256KB`) is allocated in PSRAM on purpose.
+### Required Tools settings (N16R8)
+
+Menu names can vary slightly by esp32 package version:
+
+| Tools menu | Setting for MiniMe |
+|---|---|
+| **Board** | **ESP32S3 Dev Module** (not generic ESP32 Dev Module) |
+| **USB CDC On Boot** | **Enabled** (USB-C Serial) |
+| **USB Mode** | **Hardware CDC and JTAG** |
+| **Flash Size** | **16MB (128Mb)** |
+| **Flash Mode** | **QIO 80MHz** (typical; use what works on your board) |
+| **Partition Scheme** | Sketch ships **`partitions.csv`**: dual OTA apps (~7.9MB each), **no SPIFFS / no filesystem**. If the menu offers **Custom**, select it; when `partitions.csv` is in the sketch folder, Arduino uses it. |
+| **PSRAM** | **OPI PSRAM** |
+| **PSRAM frequency** (if shown) | **80MHz** (or board default for OPI) |
+| **Arduino Runs On** | **Core 1** (default is fine) |
+| **Events Run On** | **Core 1** (default is fine) |
+| **USB DFU On Boot** | Disabled (unless you need DFU) |
+| **Upload Mode** | **UART0 / Hardware CDC** (match how you upload) |
+| **Upload Speed** | **921600** (or lower if uploads fail) |
+
+### RAM / flash notes
+
+- **RAM:** internal SRAM + **8MB OPI PSRAM** (the “R8”). **PSRAM → OPI PSRAM** must be on or this board’s memory layout is wrong.
+- Large Discord Gateway JSON (`GW_DOC_PSRAM`, **256KB**) is allocated in **PSRAM on purpose**.
+- Do **not** turn on `heap_caps_malloc_extmem_enable` for small allocations. Putting Wi-Fi / TLS buffers in PSRAM can **crash** this board.
+- **Flash:** **16MB** (“N16”). `partitions.csv` uses almost all of it for **two OTA app slots** and a small coredump area — **no filesystem**. First flash is USB; later updates can use Wi-Fi OTA (`!ota` / network port).
 
 ---
 

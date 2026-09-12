@@ -3,7 +3,7 @@
 
  Sketch map:
   secrets.h / secrets.example.h  -- Wi-Fi, tokens, IDs (gitignored)
-  config.h                       -- pins, buffer sizes, timing constants
+  minime_config.h                -- pins, buffer sizes, timing constants
   minime.h                         -- shared declarations and globals
   time_util.cpp                    -- NTP, Pacific DST, updateLocalTime
   users.cpp                        -- tracked users, guild cache, presence
@@ -14,8 +14,10 @@
   discord_gateway.cpp              -- websocket, heartbeat, identify, events
   serial_log.cpp                   -- Serial/USB CDC dual log (ESP32-S3)
   ota.cpp                          -- Wi-Fi ArduinoOTA firmware update
+  web_ui.cpp                       -- LAN page: logo + display + log + serial
+  k9dtv_logo_svg.h                 -- static K9DTV logo for /logo.svg
   commands.cpp                     -- handleCommand, APIs, DeepSeek, scheduled
-  MiniMe_Discord_Bot.ino           -- setup / loop only
+  MiniMe_Discord_Bot.ino           -- setup / loop + Wi-Fi / gateway connect
 
  OLED sleep dims then blanks the panel only; ESP32 and Wi-Fi stay up.
  Touch is polled in loop() (no interrupt). Bot status: online on activity,
@@ -25,19 +27,20 @@
   Board: ESP32S3 Dev Module (required — not generic ESP32 Dev Module)
   USB CDC On Boot = Enabled
   USB Mode = Hardware CDC and JTAG
- Monitor 115200. If CDC is Off, firmware still opens USBSerial on the same cable.
- Try the other COM port if one is quiet (JTAG vs CDC).
+ MmLog does not print to the Serial port; open http://<board-ip>/ for LOG.
+ Port still enumerates for upload / OTA; Monitor will be quiet.
 
  Wi-Fi OTA: first flash still via USB. Then Tools -> Port -> minime network port.
- Partition Scheme must include OTA app slots. Set OTA_PASSWORD in secrets.h.
+ Partition: Flash Size 16MB; sketch partitions.csv = 2x ~7.9MB OTA apps, no SPIFFS/FS.
+ Set OTA_PASSWORD in secrets.h.
  Owner Discord: !ota
+
+ LAN web UI: Display|SysInfo; LOG|Serial under both (Serial no scrollbar, <= LOG lines). USB Serial quiet.
+
+ Copy note: sketch folder must contain ONLY this one .ino (no second Discord_*.ino).
+ Also copy partitions.csv with the sketch (needed for the 16MB OTA layout).
 */
 #include "minime.h"
-
-// OTA (also declared in minime.h — keep if Arduino sketch folder has an older header)
-void setupMiniMeOta();
-void pumpOta();
-String otaStatusText();
 
 void connectWiFi() {
   WiFi.mode(WIFI_STA);
@@ -75,6 +78,7 @@ void setup() {
   sensors.begin();
   connectWiFi();
   setupMiniMeOta();
+  setupWebUi();
   timeClient.begin();
   showTransient("Discord", "Loading users...");
   if (fetchGuildMembersAtStartup()) {
@@ -94,11 +98,13 @@ void setup() {
 
 void loop() {
   pumpOta();
+  pumpWebUi();
   // While flashing, do not run Discord / display work (starves OTA → timeouts / odd replies like '864')
   if (otaIsBusy()) {
     return;
   }
   pumpGateway();
+  pumpSetFlash();
   backgroundTasks();
   pollTouchWake();
   updateBotPresenceIdle();

@@ -1,18 +1,154 @@
 # Changelog
 
-Older sections describe that release as shipped. Current firmware and docs are **0.4.48** (see `VERSION` and README).
+Older sections describe that release as shipped. Current firmware and docs are **0.4.85** (see `VERSION` and README).
 
-## 0.4.48
+## 0.4.85
 
-- OTA: pause Discord Gateway during Wi‑Fi flash (avoids timeouts / odd replies like `864`); hold 240 MHz; longer OTA timeout.
-- CI: enable **USB CDC On Boot** in FQBN; Serial log no longer references `USBSerial` (fixes GitHub compile).
+- Web Display: `.dash` gets `min-width:0;overflow:hidden` so meter `1fr` bars cannot spill past the Display panel. Confirm flash via `Display · v0.4.85`.
 
-## 0.4.47
+## 0.4.84
 
-- **Arduino IDE:** board **must** be **ESP32S3 Dev Module** (documented in README + sketch header).
-- Wi‑Fi **ArduinoOTA** (`ota.cpp`): password in secrets, owner `!ota`, OLED progress; Serial Monitor remains USB+COM only.
-- Gateway harden: Resume / op7 / op9, reconnect backoff, Wi‑Fi retry; Serial drop log (5s remind / 60s dump) via `serial_log.cpp`.
-- Servo uses Arduino 3.x `ledcAttach`/`ledcWrite` (no `driver/ledc.h`); touch uses `ESP_ARDUINO_VERSION` (no `esp_idf_version.h`).
+- Web Display meters: bar column is remaining width (`1fr`), not fixed `9rem`, so bars stop at the Display panel edge. Confirm flash via `Display · v0.4.84`.
+
+## 0.4.83
+
+- Web Display meters: value column `10ch` -> `7ch` so bars sit ~3 chars left. Confirm flash via `Display · v0.4.83`.
+
+## 0.4.82
+
+- Web Display meters: restore first-page fixed `9rem` `.bar` + original `bar()` fill. Each row is `label | 10ch value | bar` so Srv bar left edge matches Heap (and Sig). Confirm flash via `Display · v0.4.82`.
+
+## 0.4.81
+
+- Fix (on us): meters HTML is built on the ESP (not JS grid). Every bar track is `position:absolute;left:148px` so value length cannot shift bar starts. Confirm flash via `Display · v0.4.81`.
+
+## 0.4.80
+
+- Fix (on us): 0.4.78 table CSS did not lock bar columns. Sig/Heap/Srv now use one inline `display:grid` with columns `40px | 100px | 1fr` so all bar left edges match. Confirm flash via `Display · v0.4.80`.
+
+## 0.4.79
+
+- Web Display meters use absolute pixel layout: label at 0, value at 40px, every bar starts at 140px. Subtitle and Display header show `v0.4.79`.
+
+## 0.4.78
+
+- Web Display Sig/Heap/Srv use a fixed-layout HTML table so bar left edges share one column. Page subtitle shows `v0.4.78` so a successful flash is obvious.
+
+## 0.4.77
+
+- Web Display: each Sig/Heap/Srv row is its own identical grid (`label | 7rem value | bar`) so all three bar left edges match Sig.
+
+## 0.4.76
+
+- Web Display Sig/Heap/Srv values left-justified in the number column.
+
+## 0.4.75
+
+- Web Display meters: label | number (left) | bar (right); fixed value column keeps Sig/Heap/Srv bars aligned.
+
+## 0.4.74
+
+- Web UI: `sendNoCacheHeaders()` on `/` and `/api/status` plus HTML cache meta so browsers do not keep a stale page.
+
+## 0.4.73
+
+- Web Display meters left-justified: label | bar | value (Sig/Heap/Srv bars share left edge).
+
+## 0.4.72
+
+- Web Display Sig/Heap/Srv use one CSS grid (label | fixed value col | bar) so all three bars share the same left edge.
+
+## 0.4.71
+
+- Web Display meters: bar first (shared left edge after label), value on the right -- Heap/Srv/Sig bars align.
+
+## 0.4.70
+
+- Web Display: Sig/Heap/Srv meter bars share one left edge (fixed-width value column). OLED bar layout unchanged from pre-0.4.69. Idle CPU remains 100 MHz.
+
+## 0.4.69
+
+- Idle CPU (OLED off + Discord Idle, web not holding CPU) is 100 MHz.
+
+## 0.4.68
+
+- DM to bot flashes set1 at 10 Hz; @OWNER_ID mention flashes set2 at 10 Hz. Owner `!clear` stops both and forces OFF. `!set1`/`!set2` stop that pin's flash.
+
+## 0.4.67
+
+- USB Serial fully quiet: no `Serial.begin` / no MmLog to the port. All MmLog still goes to the web panels via `webLogFeed`. Copy `serial_log.cpp` when flashing.
+
+## 0.4.66
+
+- Serial panel back beside LOG; same box height; Serial has no scrollbar; Serial lines capped to LOG line count. USB Serial port still quiet.
+
+## 0.4.65
+
+- MmLog no longer writes to the USB Serial port; same lines still go to the web LOG via `webLogFeed`. Web UI unchanged.
+
+## 0.4.64
+
+- Kill Serial panel. Same MmLog stream still feeds the web LOG panel (FULL/END headers stripped). Layout: Display|SysInfo, LOG full width under both.
+
+## 0.4.63
+
+- Serial keeps its own live MmLog feed again (not cleared/clipped when LOG is empty). Same max depth as LOG.
+
+## 0.4.62
+
+- Rename system panel to SysInfo. LOG and Serial sit under Display+SysInfo. Serial line count capped to LOG line count.
+
+## 0.4.61
+
+- Layout: Display left, system Log right; under Display LOG then Serial. LOG = body between `[GW] === FULL LOG ===` and `END LOG` (headers omitted). Serial = all other MmLog lines.
+
+## 0.4.60
+
+- Web layout: centered logo (opens k9dtv.com), subtitle MiniMe A Discord Server APP; system Log left of Display; LOG (serial ring) under Display with Serial to its right (MmLog only).
+
+## 0.4.59
+
+- Web UI one page: K9DTV logo + Display + system Log + Serial(5). Separate `/log` removed.
+
+## 0.4.58
+
+- Full K9DTV logo restored; Display again includes tracked users. Two pages kept (`/` + `/log`). Use a ~4MB app partition if link overflows.
+
+## 0.4.57
+
+- Web UI back to two pages: `/` Display + Serial(5) with logo; `/log` system Log panel (opens in new window). Compact logo kept.
+
+## 0.4.56
+
+- Shrink web UI flash use: compact logo SVG + leaner CSS so the app fits the board text section.
+
+## 0.4.55
+
+- Web UI one page: Display (no tracked users), **Log** system panel restored, **Serial** shows only 5 live lines (RAM ring, no log file).
+
+## 0.4.54
+
+- Web UI: static K9DTV logo at top (`/logo.svg`, cached; not part of status refresh).
+
+## 0.4.53
+
+- Web UI: one page with display + live **Log** (serial/MmLog lines). Removed separate /long window.
+
+## 0.4.52
+
+- Keep CPU at 240 MHz while LAN web UI is up so OLED sleep / Discord Idle no longer drops Wi-Fi and kills the browser page.
+
+## 0.4.51
+
+- Web UI formatting: OLED-style label/value rows, meter bars, user columns; long-data page uses a system grid + user table.
+
+## 0.4.50
+
+- Web UI: display box only (fixed status JSON load); removed serial log panel and footer note; **Long data** opens `/long` in a new window.
+
+## 0.4.49
+
+- LAN web UI on port 80: OLED-style dashboard box (same fields, not pixels) plus a live 5-line serial log box (`web_ui.cpp`).
 
 ## 0.4.40
 

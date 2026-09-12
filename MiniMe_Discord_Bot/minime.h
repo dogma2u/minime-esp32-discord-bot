@@ -16,7 +16,7 @@
 #include <string.h>
 
 #include "secrets.h"
-#include "config.h"
+#include "minime_config.h"
 
 // Dual UART + USB CDC logging (ESP32-S3 USB-C often needs this)
 class MmLogClass : public Print {
@@ -28,6 +28,7 @@ class MmLogClass : public Print {
 extern MmLogClass MmLog;
 void mmSerialBegin();
 bool mmSerialCdcOnBoot();
+void webLogFeed(const uint8_t* buffer, size_t size);
 
 // ====== USER TRACKING ======
 struct TrackedUser {
@@ -70,6 +71,11 @@ void setupMiniMeOta();
 void pumpOta();
 bool otaIsBusy();
 String otaStatusText();
+
+// ====== LAN WEB UI ======
+void setupWebUi();
+void pumpWebUi();
+bool webUiKeepsCpuActive();
 
 // ====== DISCORD REST / HTTPS ======
 extern WiFiClientSecure httpsClient;
@@ -138,6 +144,12 @@ bool readTemperature(float& tempC, float& tempF);
 void setLedRgb(uint8_t r, uint8_t g, uint8_t b);
 bool parseRgbTriplet(const String& args, uint8_t& r, uint8_t& g, uint8_t& b);
 bool isOwner(const String& authorId);
+void startSet1Flash();
+void startSet2Flash();
+void stopSet1Flash(bool leaveHigh);
+void stopSet2Flash(bool leaveHigh);
+void clearSetOutputs();
+void pumpSetFlash();
 
 // ====== USERS / PRESENCE ======
 extern TrackedUser trackedUsers[MAX_TRACKED_USERS];
