@@ -84,7 +84,7 @@ MiniMe’s own Discord status (green Online / yellow Idle) in Discord:
 
 ## How it works
 
-Everything below runs on one **ESP32-S3**. Discord stays in the cloud; MiniMe talks to it two ways, paints the OLED, and wakes the panel from a touch pad.
+Everything below runs on one **ESP32-S3**. Discord stays in the cloud; MiniMe talks to it two ways, paints the OLED, serves a LAN web dashboard, and wakes the panel from a touch pad.
 
 ```mermaid
 flowchart TB
@@ -99,8 +99,13 @@ flowchart TB
     REST[REST: post messages fetch members]
     CMD[Command handler + scheduled posts]
     OLED[SSD1327 OLED dashboard]
+    WEB[LAN web UI :80 Display SysInfo LOG Serial]
     TOUCH[Touch GPIO 4 + USB VBUS compensate]
     IO[GPIO servo NeoPixel DS18B20]
+  end
+
+  subgraph lan [LAN browser]
+    BR[http board-ip]
   end
 
   DG <-->|TLS websocket| GW
@@ -112,11 +117,16 @@ flowchart TB
   TOUCH -->|wake / full contrast| OLED
   CMD --> IO
   IO -->|temp servo| OLED
+  OLED -.->|same status fields| WEB
+  IO -.->|RSSI heap servo temp| WEB
+  GW -.->|log lines| WEB
+  BR -->|HTTP GET / and /api/status| WEB
 ```
 
 - **Gateway** — live link for chat commands, presence, Online/Idle, heartbeats (must not stall during long HTTPS).
 - **REST** — bot posts replies and loads member names; also pulls science/weather/AI over HTTPS/HTTP.
 - **OLED** — always the status board; sleep blanks the panel only (Wi-Fi and Gateway stay up).
+- **LAN web UI** — same board status in a browser at `http://<board-ip>/` (Display, SysInfo, LOG, Serial); refreshes about once a second; does not replace OLED.
 - **Touch** — wakes the OLED only; does not change Discord status or fire GPIO commands.
 
 ### Why this is hard (on one MCU)
