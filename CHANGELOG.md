@@ -1,6 +1,11 @@
 # Changelog
 
-Older sections describe that release as shipped. Current firmware and docs are **0.4.47** (see `VERSION` and README).
+Older sections describe that release as shipped. Current firmware and docs are **0.4.48** (see `VERSION` and README).
+
+## 0.4.48
+
+- OTA: pause Discord Gateway during Wi‑Fi flash (avoids timeouts / odd replies like `864`); hold 240 MHz; longer OTA timeout.
+- CI: enable **USB CDC On Boot** in FQBN; Serial log no longer references `USBSerial` (fixes GitHub compile).
 
 ## 0.4.47
 

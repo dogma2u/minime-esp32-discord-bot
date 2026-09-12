@@ -203,8 +203,12 @@ void updateBotPresenceIdle() {
   sendBotPresence("idle", true);
 }
 
-// 80 MHz only when OLED off and Discord Idle. Wi-Fi needs >= 80 MHz.
+// 80 MHz only when OLED off and Discord Idle. Hold 240 during OTA.
 void applyCpuForIdleState() {
+  if (otaIsBusy()) {
+    if (getCpuFrequencyMhz() != CPU_MHZ_ACTIVE) setCpuFrequencyMhz(CPU_MHZ_ACTIVE);
+    return;
+  }
   bool slow = displayAsleep && botDiscordStatus == 1 && identified;
   uint32_t want = slow ? CPU_MHZ_OLED_OFF_BOT_IDLE : CPU_MHZ_ACTIVE;
   if (getCpuFrequencyMhz() == want) return;

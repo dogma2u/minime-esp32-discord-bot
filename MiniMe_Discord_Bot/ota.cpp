@@ -2,16 +2,27 @@
 #include <ArduinoOTA.h>
 
 static bool otaReady = false;
+static volatile bool otaInProgress = false;
+
+bool otaIsBusy() {
+  return otaInProgress;
+}
 
 void setupMiniMeOta() {
   ArduinoOTA.setHostname(OTA_HOSTNAME);
   ArduinoOTA.setPassword(OTA_PASSWORD);
   ArduinoOTA.setPort(3232);
-  ArduinoOTA.setTimeout(20000);
+  ArduinoOTA.setTimeout(60000);
 
   ArduinoOTA.onStart([]() {
+    otaInProgress = true;
     setCpuFrequencyMhz(CPU_MHZ_ACTIVE);
     noteBotActivity();
+    // Stop Discord websocket so OTA owns Wi-Fi / CPU
+    gatewayWS.setReconnectInterval(3600000UL); // park auto-reconnect during flash
+    gatewayWS.disconnect();
+    gatewayConnected = false;
+    identified = false;
     String t = (ArduinoOTA.getCommand() == U_FLASH) ? "Firmware" : "FS";
     showTransient("OTA", String("Start ") + t);
     MmLog.println(String("[OTA] start ") + t);
@@ -19,6 +30,7 @@ void setupMiniMeOta() {
   ArduinoOTA.onEnd([]() {
     showTransient("OTA", "Done reboot");
     MmLog.println("[OTA] end");
+    // reboot follows; leave otaInProgress set
   });
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     if (total == 0) return;
@@ -31,6 +43,7 @@ void setupMiniMeOta() {
     MmLog.println(String("[OTA] ") + String(pct) + "%");
   });
   ArduinoOTA.onError([](ota_error_t err) {
+    otaInProgress = false;
     String e = "err ";
     e += String((int)err);
     if (err == OTA_AUTH_ERROR) e = "Auth fail";
@@ -70,6 +83,7 @@ String otaStatusText() {
   s += "• **Serial Monitor:** USB + COM only (network has no Monitor)\n";
   s += "• Password is `OTA_PASSWORD` in secrets.h\n";
   s += "• Partition Scheme must include **OTA** (dual app slots)\n";
+  s += "• Bot stays Online until OTA starts, then Gateway pauses for the upload\n";
   s += "• If connect fails: allow Arduino IDE through Windows Firewall";
   return s;
 }

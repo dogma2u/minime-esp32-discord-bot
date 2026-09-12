@@ -94,6 +94,10 @@ void setup() {
 
 void loop() {
   pumpOta();
+  // While flashing, do not run Discord / display work (starves OTA → timeouts / odd replies like '864')
+  if (otaIsBusy()) {
+    return;
+  }
   pumpGateway();
   backgroundTasks();
   pollTouchWake();

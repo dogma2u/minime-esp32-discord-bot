@@ -41,5 +41,5 @@ jobs:
       - name: Compile sketch
         run: |
           arduino-cli compile \
-            --fqbn "esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi" \
+            --fqbn "esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi,CDCOnBoot=cdc" \
             MiniMe_Discord_Bot

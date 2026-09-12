@@ -68,6 +68,7 @@ void gwSendJson(JsonDocument& doc);
 // ====== WIFI OTA ======
 void setupMiniMeOta();
 void pumpOta();
+bool otaIsBusy();
 String otaStatusText();
 
 // ====== DISCORD REST / HTTPS ======
